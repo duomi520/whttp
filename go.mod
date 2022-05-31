@@ -1,4 +1,4 @@
-module github.com/duomi520/wswhttp
+module github.com/duomi520/whttp
 
 go 1.18
 
