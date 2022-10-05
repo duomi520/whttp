@@ -1,16 +1,14 @@
-package utils
+package whttp
 
 import (
 	"bytes"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
-	"github.com/duomi520/utils"
-	"github.com/go-playground/validator"
 	"github.com/gorilla/mux"
 )
 
@@ -30,7 +28,7 @@ func TestWarp(t *testing.T) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	greeting, err := ioutil.ReadAll(res.Body)
+	greeting, err := io.ReadAll(res.Body)
 	res.Body.Close()
 	if err != nil {
 		log.Fatal(err)
@@ -57,7 +55,14 @@ func TestMiddleware(t *testing.T) {
 			signature += "B2"
 		}
 	}
-	group := HTTPMiddleware(MiddlewareA(), MiddlewareB())
+	MiddlewareC := func() func(*HTTPContext) {
+		return func(c *HTTPContext) {
+			signature += "C1"
+			c.Next()
+			signature += "C2"
+		}
+	}
+	group := HTTPMiddleware(MiddlewareA(), MiddlewareB(), MiddlewareC())
 	fn := func(c *HTTPContext) {
 		signature += "<->"
 	}
@@ -68,55 +73,7 @@ func TestMiddleware(t *testing.T) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	if !strings.EqualFold(signature, "A1B1<->B2A2") {
-		t.Errorf("got %s | expected A1B1<->B2A2", signature)
-	}
-}
-
-func TestLoggerMiddleware(t *testing.T) {
-	logger, _ := utils.NewWLogger(utils.DebugLevel, "")
-	fn := func(c *HTTPContext) {
-	}
-	group := HTTPMiddleware(LoggerMiddleware())
-	r := &WRoute{router: mux.NewRouter(), logger: logger}
-	ts := httptest.NewServer(http.HandlerFunc(r.Warp(group, fn)))
-	defer ts.Close()
-	_, err := http.Post(ts.URL, "application/x-www-form-urlencoded",
-		strings.NewReader(""))
-	if err != nil {
-		log.Fatal(err)
-	}
-	_, err = http.Get(ts.URL)
-	if err != nil {
-		log.Fatal(err)
-	}
-}
-
-/*
-[Debug] 2022-05-04 23:32:00 |             0 | 127.0.0.1:62286 |     0 |    POST | / |
-[Debug] 2022-05-04 23:32:00 |             0 | 127.0.0.1:62286 |     0 |     GET | / |
-*/
-
-func TestValidatorMiddleware(t *testing.T) {
-	v := validator.New()
-	fn := func(c *HTTPContext) {}
-	group := HTTPMiddleware(ValidatorMiddleware("number:numeric"))
-	r := &WRoute{router: mux.NewRouter(), validatorVar: v.Var, validatorStruct: v.Struct}
-	mr := mux.NewRouter()
-	ts := httptest.NewServer(mr)
-	mr.HandleFunc("/number/{number}", r.Warp(group, fn)).Methods("POST")
-	defer ts.Close()
-	resp, err := http.Post(ts.URL+"/number/77", "application/x-www-form-urlencoded",
-		strings.NewReader(""))
-	if err != nil {
-		log.Fatal(err)
-	}
-	data, err := ioutil.ReadAll(resp.Body)
-	resp.Body.Close()
-	if err != nil {
-		log.Fatal(err)
-	}
-	if resp.StatusCode != 200 {
-		log.Fatal(string(data))
+	if !strings.EqualFold(signature, "A1B1C1<->C2B2A2") {
+		t.Errorf("got %s | expected A1B1C1<->C2B2A2", signature)
 	}
 }

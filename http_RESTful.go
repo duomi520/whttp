@@ -1,14 +1,12 @@
-package utils
+package whttp
 
 import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"runtime"
-	"strings"
-	"time"
+	"sync"
 
 	"github.com/duomi520/utils"
 	"github.com/gorilla/mux"
@@ -20,15 +18,21 @@ type HTTPGroup = []func(*HTTPContext)
 type HTTPContext struct {
 	index   int
 	chain   HTTPGroup
-	Vars    map[string]string
+	vars    map[string]string
 	Writer  http.ResponseWriter
 	Request *http.Request
 	route   *WRoute
 }
 
+var HTTPContextPool = sync.Pool{
+	New: func() interface{} {
+		return &HTTPContext{}
+	},
+}
+
 //Params 请求参数
 func (c *HTTPContext) Params(s string) string {
-	if v, ok := c.Vars[s]; ok {
+	if v, ok := c.vars[s]; ok {
 		return v
 	}
 	return c.Request.FormValue(s)
@@ -36,7 +40,7 @@ func (c *HTTPContext) Params(s string) string {
 
 //BindJSON 绑定JSON数据
 func (c *HTTPContext) BindJSON(v any) error {
-	buf, err := ioutil.ReadAll(c.Request.Body)
+	buf, err := io.ReadAll(c.Request.Body)
 	if err != nil {
 		return fmt.Errorf("readAll faile: %w", err)
 	}
@@ -77,14 +81,14 @@ func (c *HTTPContext) Next() {
 
 //WRoute w
 type WRoute struct {
+	DebugMode bool
 	//mux
 	router *mux.Router
 	//validator
 	validatorVar    func(any, string) error
 	validatorStruct func(any) error
 	//logger
-	logger    utils.ILogger
-	DebugMode bool
+	logger utils.ILogger
 }
 
 //NewRoute 新建
@@ -145,87 +149,21 @@ func (r *WRoute) Warp(g HTTPGroup, fn func(*HTTPContext)) func(http.ResponseWrit
 				}
 			}
 		}()
-		c := &HTTPContext{chain: chain, Writer: rw, Request: req, route: r}
-		c.Vars = mux.Vars(req)
+		c := HTTPContextPool.Get().(*HTTPContext)
+		c.index = 0
+		c.chain = chain
+		c.vars = mux.Vars(req)
+		c.Writer = rw
+		c.Request = req
+		c.route = r
 		c.chain[0](c)
+		HTTPContextPool.Put(c)
 	}
 }
 
 //HTTPMiddleware 中间件
 func HTTPMiddleware(m ...func(*HTTPContext)) HTTPGroup {
 	return m
-}
-
-//ValidatorMiddleware 输入参数验证
-func ValidatorMiddleware(a ...string) func(*HTTPContext) {
-	var s0, s1 []string
-	for _, v := range a {
-		s := strings.Split(v, ":")
-		if len(s) != 2 {
-			panic(fmt.Sprintf("validate:bad describe %s", v))
-		}
-		s0 = append(s0, s[0])
-		s1 = append(s1, s[1])
-	}
-	return func(c *HTTPContext) {
-		for i := range s0 {
-			if err := c.route.validatorVar(c.Params(s0[i]), s1[i]); err != nil {
-				c.String(http.StatusBadRequest, fmt.Sprintf("validate %s %s faile: %s", s0[i], s1[i], err.Error()))
-				return
-			}
-		}
-		c.Next()
-	}
-}
-
-var formatLogger string = "| %13d | %15s | %5d | %7s | %s | %s "
-
-//LoggerMiddleware 日志
-func LoggerMiddleware() func(*HTTPContext) {
-	var startTime time.Time
-	var rw httpLoggerResponseWriter
-	return func(c *HTTPContext) {
-		startTime = time.Now()
-		rw.w = c.Writer
-		c.Writer = &rw
-		c.Next()
-		if rw.status > 299 {
-			if rw.err != nil {
-				c.route.logger.Error(fmt.Sprintf(formatLogger, time.Since(startTime), c.Request.RemoteAddr, rw.status, c.Request.Method, c.Request.URL, rw.err.Error()))
-			} else {
-				c.route.logger.Warn(fmt.Sprintf(formatLogger, time.Since(startTime), c.Request.RemoteAddr, rw.status, c.Request.Method, c.Request.URL, rw.result))
-			}
-		} else {
-			c.route.logger.Debug(fmt.Sprintf(formatLogger, time.Since(startTime), c.Request.RemoteAddr, rw.status, c.Request.Method, c.Request.URL, rw.result))
-		}
-	}
-}
-
-//httpLoggerResponseWriter d
-type httpLoggerResponseWriter struct {
-	status int
-	result []byte
-	err    error
-	w      http.ResponseWriter
-}
-
-//Header 返回一个Header类型值
-func (h *httpLoggerResponseWriter) Header() http.Header {
-	return h.w.Header()
-}
-
-//WriteHeader 该方法发送HTTP回复的头域和状态码
-func (h *httpLoggerResponseWriter) WriteHeader(s int) {
-	h.status = s
-	h.w.WriteHeader(s)
-}
-
-//Write 向连接中写入作为HTTP的一部分回复的数据
-func (h *httpLoggerResponseWriter) Write(d []byte) (int, error) {
-	n, err := h.w.Write(d)
-	h.result = d
-	h.err = err
-	return n, err
 }
 
 // https://github.com/julienschmidt/httprouter
