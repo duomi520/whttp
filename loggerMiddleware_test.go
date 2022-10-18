@@ -1,14 +1,14 @@
 package whttp
+
 import (
+	"github.com/duomi520/utils"
+	"github.com/gorilla/mux"
 	"log"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
-	"github.com/duomi520/utils"
-	"github.com/gorilla/mux"
 )
-
 
 func TestLoggerMiddleware(t *testing.T) {
 	logger, _ := utils.NewWLogger(utils.DebugLevel, "")
@@ -30,7 +30,6 @@ func TestLoggerMiddleware(t *testing.T) {
 }
 
 /*
-[Debug] 2022-05-04 23:32:00 |             0 | 127.0.0.1:62286 |     0 |    POST | / |
-[Debug] 2022-05-04 23:32:00 |             0 | 127.0.0.1:62286 |     0 |     GET | / |
+[Debug] 2022-10-18 18:33:11 |            0s | 127.0.0.1:60511 |     0 |    POST | / |
+[Debug] 2022-10-18 18:33:11 |            0s | 127.0.0.1:60511 |     0 |     GET | / |
 */
-

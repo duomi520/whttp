@@ -1,11 +1,12 @@
 package whttp
+
 import (
 	"fmt"
 	"net/http"
 	"time"
 )
 
-var formatLogger string = "| %13d | %15s | %5d | %7s | %s | %s "
+var formatLogger string = "| %13v | %15s | %5d | %7s | %s | %s "
 
 //LoggerMiddleware 日志
 func LoggerMiddleware() func(*HTTPContext) {
@@ -16,14 +17,18 @@ func LoggerMiddleware() func(*HTTPContext) {
 		rw.w = c.Writer
 		c.Writer = &rw
 		c.Next()
+		latency := time.Since(startTime)
+		if latency > time.Minute {
+			latency = latency.Truncate(time.Second)
+		}
 		if rw.status > 299 {
 			if rw.err != nil {
-				c.route.logger.Error(fmt.Sprintf(formatLogger, time.Since(startTime), c.Request.RemoteAddr, rw.status, c.Request.Method, c.Request.URL, rw.err.Error()))
+				c.route.logger.Error(fmt.Sprintf(formatLogger, latency, c.Request.RemoteAddr, rw.status, c.Request.Method, c.Request.URL, rw.err.Error()))
 			} else {
-				c.route.logger.Warn(fmt.Sprintf(formatLogger, time.Since(startTime), c.Request.RemoteAddr, rw.status, c.Request.Method, c.Request.URL, rw.result))
+				c.route.logger.Warn(fmt.Sprintf(formatLogger, latency, c.Request.RemoteAddr, rw.status, c.Request.Method, c.Request.URL, rw.result))
 			}
 		} else {
-			c.route.logger.Debug(fmt.Sprintf(formatLogger, time.Since(startTime), c.Request.RemoteAddr, rw.status, c.Request.Method, c.Request.URL, rw.result))
+			c.route.logger.Debug(fmt.Sprintf(formatLogger, latency, c.Request.RemoteAddr, rw.status, c.Request.Method, c.Request.URL, rw.result))
 		}
 	}
 }
