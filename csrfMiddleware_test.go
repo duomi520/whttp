@@ -1,0 +1,95 @@
+package whttp
+
+import (
+	"fmt"
+	"io"
+	"net/http"
+	"net/http/httptest"
+
+	"testing"
+
+	"github.com/duomi520/utils"
+	"github.com/gorilla/csrf"
+	"github.com/gorilla/mux"
+)
+
+func getCSRF(w http.ResponseWriter, r *http.Request) {
+	// 获取token值
+	token := csrf.Token(r)
+	// 将token写入到header中
+	w.Header().Set("X-CSRF-Token", token)
+	fmt.Fprintln(w, "hello")
+}
+
+func postCSRF(w http.ResponseWriter, r *http.Request) {
+	token := csrf.Token(r)
+	w.Header().Set("X-CSRF-Token", token)
+	fmt.Fprintln(w, "<1>")
+}
+
+func TestCSRFMiddleware(t *testing.T) {
+	logger, _ := utils.NewWLogger(utils.DebugLevel, "")
+	r := &WRoute{router: mux.NewRouter(), logger: logger}
+	csrfMiddleware := csrf.Protect([]byte("32-byte-long-auth-key"))
+	r.router.Use(csrfMiddleware)
+	r.router.HandleFunc("/a", getCSRF)
+	r.router.HandleFunc("/c", postCSRF)
+	ts := httptest.NewServer(r.router)
+	defer ts.Close()
+	//先get
+	res, err := http.Get(ts.URL + "/a")
+	if err != nil {
+		t.Fatal(err)
+	}
+	token := res.Header.Get("X-CSRF-Token")
+	if len(token) == 0 {
+		t.Fatal("token is nil")
+	}
+	cookies := res.Cookies()
+	if len(cookies[0].String()) == 0 {
+		t.Fatal("cookies is nil")
+	}
+	//不带token
+	req, err := http.NewRequest("POST", ts.URL+"/c", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp, err := (&http.Client{}).Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != 403 {
+		t.Fatal(resp.Status)
+	}
+	//t.Log(resp)
+	//带token
+	logger.Debug(resp.Header.Get("X-CSRF-Token"))
+	req.Header.Set("Cookie", cookies[0].String())
+	req.Header.Set("X-CSRF-Token", token)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	resp, err = (&http.Client{}).Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.StatusCode != 200 {
+		t.Fatal(resp.Status)
+	}
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	logger.Debug(string(data))
+	//t.Log(resp)
+	logger.Debug(resp.Header.Get("X-CSRF-Token"))
+}
+
+/*
+[Debug] 2022-10-30 07:45:56
+[Debug] 2022-10-30 07:45:56 <1>
+
+[Debug] 2022-10-30 07:45:56 v+kcCp+s+9ldC/a/jAeqZcD2D41k/NV5JIfZ3E2mUEd79WpH56vPM+PEYKFvrMKUkspVhLVs8EDCO9zSLylv4Q==
+*/
+
+// https://studygolang.com/articles/35927

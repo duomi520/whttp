@@ -4,7 +4,12 @@ go 1.18
 
 require github.com/go-playground/validator v9.31.0+incompatible
 
-require gopkg.in/go-playground/assert.v1 v1.2.1 // indirect
+require (
+	github.com/gorilla/csrf v1.7.1 // indirect
+	github.com/gorilla/securecookie v1.1.1 // indirect
+	github.com/pkg/errors v0.9.1 // indirect
+	gopkg.in/go-playground/assert.v1 v1.2.1 // indirect
+)
 
 require (
 	github.com/duomi520/utils v0.0.0-20221022051957-8dffdc85ecc9
