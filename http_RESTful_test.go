@@ -3,44 +3,71 @@ package whttp
 import (
 	"bytes"
 	"io"
-	"log"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
-	"github.com/gorilla/mux"
+	"github.com/julienschmidt/httprouter"
 )
 
-func TestWarp(t *testing.T) {
-	r := &WRoute{router: mux.NewRouter()}
+func TestFormValue(t *testing.T) {
+	r := &WRoute{router: httprouter.New()}
 	fn := func(c *HTTPContext) {
-		if (strings.Compare(c.Params("name"), "linda") == 0) && (strings.Compare(c.Params("mobile"), "xxxxxxxx") == 0) {
+		if (strings.Compare(c.Request.FormValue("name"), "linda") == 0) && (strings.Compare(c.Request.FormValue("mobile"), "xxxxxxxx") == 0) {
 			c.String(http.StatusOK, "OK")
 		} else {
 			c.String(http.StatusOK, "NG")
 		}
 	}
-	ts := httptest.NewServer(http.HandlerFunc(r.Warp(nil, fn)))
+	r.POST(nil, "/", fn)
+	ts := httptest.NewServer(r.router)
 	defer ts.Close()
 	res, err := http.Post(ts.URL, "application/x-www-form-urlencoded",
 		strings.NewReader("name=linda&mobile=xxxxxxxx"))
 	if err != nil {
-		log.Fatal(err)
+		t.Fatal(err)
 	}
-	greeting, err := io.ReadAll(res.Body)
+	data, err := io.ReadAll(res.Body)
 	res.Body.Close()
 	if err != nil {
-		log.Fatal(err)
+		t.Fatal(err)
 	}
-	if !bytes.Equal(greeting, []byte("OK")) {
-		t.Errorf("got %s | expected ok", string(greeting))
+	if !bytes.Equal(data, []byte("OK")) {
+		t.Errorf("got %s | expected OK", string(data))
 	}
+
+}
+func TestParams(t *testing.T) {
+	r := &WRoute{router: httprouter.New()}
+	fn := func(c *HTTPContext) {
+		if (strings.Compare(c.vars.ByName("name"), "linda") == 0) && (strings.Compare(c.vars.ByName("mobile"), "xxxxxxxx") == 0) {
+			c.String(http.StatusOK, "OK")
+		} else {
+			c.String(http.StatusOK, "NG")
+		}
+	}
+	r.GET(nil, "/user/:name/mobile/:mobile", fn)
+	ts := httptest.NewServer(r.router)
+	defer ts.Close()
+	res, err := http.Get(ts.URL + "/user/linda/mobile/xxxxxxxx")
+	if err != nil {
+		t.Fatal(err)
+	}
+	data, err := io.ReadAll(res.Body)
+	res.Body.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(data, []byte("OK")) {
+		t.Errorf("got %s | expected OK", string(data))
+	}
+
 }
 
 func TestMiddleware(t *testing.T) {
 	signature := ""
-	r := &WRoute{router: mux.NewRouter()}
+	r := &WRoute{router: httprouter.New()}
 	MiddlewareA := func() func(*HTTPContext) {
 		return func(c *HTTPContext) {
 			signature += "A1"
@@ -66,12 +93,13 @@ func TestMiddleware(t *testing.T) {
 	fn := func(c *HTTPContext) {
 		signature += "<->"
 	}
-	ts := httptest.NewServer(http.HandlerFunc(r.Warp(group, fn)))
+	r.POST(group, "/", fn)
+	ts := httptest.NewServer(r.router)
 	defer ts.Close()
 	_, err := http.Post(ts.URL, "application/x-www-form-urlencoded",
 		strings.NewReader(""))
 	if err != nil {
-		log.Fatal(err)
+		t.Fatal(err)
 	}
 	if !strings.EqualFold(signature, "A1B1C1<->C2B2A2") {
 		t.Errorf("got %s | expected A1B1C1<->C2B2A2", signature)

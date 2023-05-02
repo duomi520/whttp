@@ -8,13 +8,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gorilla/mux"
+	"github.com/julienschmidt/httprouter"
 )
 
 func TestJWT(t *testing.T) {
 	jwt := JWT{TokenSigningKey: []byte("TokenSigningKey"), TokenExpires: time.Duration(time.Second)}
 	group := HTTPMiddleware(jwt.JWTMiddleware())
-	r := &WRoute{router: mux.NewRouter()}
+	r := &WRoute{router: httprouter.New()}
 	fn := func(c *HTTPContext) {
 		tokenString := c.Request.Header["Authorization"][0]
 		data, err := jwt.TokenParse(tokenString)
@@ -25,7 +25,8 @@ func TestJWT(t *testing.T) {
 			t.Fatal("不等于1920")
 		}
 	}
-	ts := httptest.NewServer(http.HandlerFunc(r.Warp(group, fn)))
+	r.POST(group, "/", fn)
+	ts := httptest.NewServer(r.router)
 	defer ts.Close()
 	//不带token
 	req, err := http.NewRequest("POST", ts.URL, nil)

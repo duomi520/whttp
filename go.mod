@@ -4,20 +4,15 @@ go 1.18
 
 require (
 	github.com/go-playground/validator v9.31.0+incompatible
-	github.com/gorilla/csrf v1.7.1
+	github.com/golang-jwt/jwt/v4 v4.5.0
+	github.com/julienschmidt/httprouter v1.3.0
 )
 
-require (
-	github.com/golang-jwt/jwt/v4 v4.4.2 // indirect
-	github.com/gorilla/securecookie v1.1.1 // indirect
-	github.com/pkg/errors v0.9.1 // indirect
-	gopkg.in/go-playground/assert.v1 v1.2.1 // indirect
-)
+require gopkg.in/go-playground/assert.v1 v1.2.1 // indirect
 
 require (
-	github.com/duomi520/utils v0.0.0-20221022051957-8dffdc85ecc9
-	github.com/go-playground/locales v0.14.0 // indirect
-	github.com/go-playground/universal-translator v0.18.0 // indirect
-	github.com/gorilla/mux v1.8.0
-	github.com/leodido/go-urn v1.2.1 // indirect
+	github.com/duomi520/utils v0.0.0-20221207130225-de5ce7bff94b
+	github.com/go-playground/locales v0.14.1 // indirect
+	github.com/go-playground/universal-translator v0.18.1 // indirect
+	github.com/leodido/go-urn v1.2.4 // indirect
 )

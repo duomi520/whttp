@@ -10,7 +10,7 @@ import (
 
 	"github.com/duomi520/utils"
 	"github.com/gorilla/csrf"
-	"github.com/gorilla/mux"
+	"github.com/julienschmidt/httprouter"
 )
 
 func getCSRF(w http.ResponseWriter, r *http.Request) {
@@ -29,7 +29,7 @@ func postCSRF(w http.ResponseWriter, r *http.Request) {
 
 func TestCSRFMiddleware(t *testing.T) {
 	logger, _ := utils.NewWLogger(utils.DebugLevel, "")
-	r := &WRoute{router: mux.NewRouter(), logger: logger}
+	r := &WRoute{router: httprouter.New(), logger: logger}
 	csrfMiddleware := csrf.Protect([]byte("32-byte-long-auth-key"))
 	r.router.Use(csrfMiddleware)
 	r.router.HandleFunc("/a", getCSRF)

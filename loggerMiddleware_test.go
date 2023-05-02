@@ -1,13 +1,13 @@
 package whttp
 
 import (
-	"github.com/duomi520/utils"
-	"github.com/gorilla/mux"
-	"log"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/duomi520/utils"
+	"github.com/julienschmidt/httprouter"
 )
 
 func TestLoggerMiddleware(t *testing.T) {
@@ -15,21 +15,23 @@ func TestLoggerMiddleware(t *testing.T) {
 	fn := func(c *HTTPContext) {
 	}
 	group := HTTPMiddleware(LoggerMiddleware())
-	r := &WRoute{router: mux.NewRouter(), logger: logger}
-	ts := httptest.NewServer(http.HandlerFunc(r.Warp(group, fn)))
+	r := &WRoute{router: httprouter.New(), logger: logger}
+	r.POST(group, "/", fn)
+	r.GET(group, "/", fn)
+	ts := httptest.NewServer(r.router)
 	defer ts.Close()
 	_, err := http.Post(ts.URL, "application/x-www-form-urlencoded",
 		strings.NewReader(""))
 	if err != nil {
-		log.Fatal(err)
+		t.Fatal(err)
 	}
 	_, err = http.Get(ts.URL)
 	if err != nil {
-		log.Fatal(err)
+		t.Fatal(err)
 	}
 }
 
 /*
-[Debug] 2022-10-18 18:33:11 |            0s | 127.0.0.1:60511 |     0 |    POST | / |
-[Debug] 2022-10-18 18:33:11 |            0s | 127.0.0.1:60511 |     0 |     GET | / |
+[Debug] 2023-05-01 13:59:46 |            0s | 127.0.0.1:61791 |     0 |    POST | / |
+[Debug] 2023-05-01 13:59:46 |            0s | 127.0.0.1:61791 |     0 |     GET | / |
 */

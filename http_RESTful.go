@@ -9,16 +9,20 @@ import (
 	"sync"
 
 	"github.com/duomi520/utils"
-	"github.com/gorilla/mux"
+	"github.com/julienschmidt/httprouter"
 )
+
+type Vars interface {
+	ByName(string) string
+}
 
 type HTTPGroup = []func(*HTTPContext)
 
-//HTTPContext 上下文
+// HTTPContext 上下文
 type HTTPContext struct {
 	index   int
 	chain   HTTPGroup
-	vars    map[string]string
+	vars    Vars
 	Writer  http.ResponseWriter
 	Request *http.Request
 	route   *WRoute
@@ -30,15 +34,12 @@ var HTTPContextPool = sync.Pool{
 	},
 }
 
-//Params 请求参数
+// Params 请求参数
 func (c *HTTPContext) Params(s string) string {
-	if v, ok := c.vars[s]; ok {
-		return v
-	}
-	return c.Request.FormValue(s)
+	return c.vars.ByName(s)
 }
 
-//BindJSON 绑定JSON数据
+// BindJSON 绑定JSON数据
 func (c *HTTPContext) BindJSON(v any) error {
 	buf, err := io.ReadAll(c.Request.Body)
 	if err != nil {
@@ -55,13 +56,13 @@ func (c *HTTPContext) BindJSON(v any) error {
 	return nil
 }
 
-//String 带有状态码的纯文本响应
+// String 带有状态码的纯文本响应
 func (c *HTTPContext) String(status int, msg string) {
 	c.Writer.WriteHeader(status)
 	io.WriteString(c.Writer, msg)
 }
 
-//JSON 带有状态码的JSON 数据
+// JSON 带有状态码的JSON 数据
 func (c *HTTPContext) JSON(status int, v any) {
 	d, err := json.Marshal(v)
 	if err != nil {
@@ -73,17 +74,16 @@ func (c *HTTPContext) JSON(status int, v any) {
 	c.Writer.Write(d)
 }
 
-//Next 下一个
+// Next 下一个
 func (c *HTTPContext) Next() {
 	c.index++
 	c.chain[c.index](c)
 }
 
-//WRoute w
+// WRoute 路由
 type WRoute struct {
 	DebugMode bool
-	//mux
-	router *mux.Router
+	router    *httprouter.Router
 	//validator
 	validatorVar    func(any, string) error
 	validatorStruct func(any) error
@@ -91,10 +91,10 @@ type WRoute struct {
 	logger utils.ILogger
 }
 
-//NewRoute 新建
+// NewRoute 新建
 func NewRoute(v utils.IValidator, log utils.ILogger) *WRoute {
 	r := WRoute{}
-	r.router = mux.NewRouter()
+	r.router = httprouter.New()
 	if v == nil {
 		panic("Validator is nil")
 	}
@@ -107,37 +107,27 @@ func NewRoute(v utils.IValidator, log utils.ILogger) *WRoute {
 	return &r
 }
 
-//PathPrefix 前缀
-func (r *WRoute) PathPrefix(tpl string) {
-	r.router.PathPrefix(tpl).Handler(http.DefaultServeMux)
+// GET g
+func (r *WRoute) GET(g HTTPGroup, pattern string, fn func(*HTTPContext)) {
+	r.router.GET(pattern, r.warp(g, fn))
 }
 
-//HandleFunc 处理
-func (r *WRoute) HandleFunc(pattern string, handler func(http.ResponseWriter, *http.Request)) {
-	r.router.HandleFunc(pattern, handler).Methods("GET")
+// POST p
+func (r *WRoute) POST(g HTTPGroup, pattern string, fn func(*HTTPContext)) {
+	r.router.POST(pattern, r.warp(g, fn))
 }
 
-//GET g
-func (r *WRoute) GET(g HTTPGroup, url string, fn func(*HTTPContext)) {
-	r.router.HandleFunc(url, r.Warp(g, fn)).Methods("GET")
+// DELETE d
+func (r *WRoute) DELETE(g HTTPGroup, pattern string, fn func(*HTTPContext)) {
+	r.router.DELETE(pattern, r.warp(g, fn))
 }
 
-//POST p
-func (r *WRoute) POST(g HTTPGroup, url string, fn func(*HTTPContext)) {
-	r.router.HandleFunc(url, r.Warp(g, fn)).Methods("POST")
-}
-
-//DELETE d
-func (r *WRoute) DELETE(g HTTPGroup, url string, fn func(*HTTPContext)) {
-	r.router.HandleFunc(url, r.Warp(g, fn)).Methods("DELETE")
-}
-
-//Warp 封装
-func (r *WRoute) Warp(g HTTPGroup, fn func(*HTTPContext)) func(http.ResponseWriter, *http.Request) {
+// warp 封装
+func (r *WRoute) warp(g HTTPGroup, fn func(*HTTPContext)) func(http.ResponseWriter, *http.Request, httprouter.Params) {
 	chain := make(HTTPGroup, len(g)+1)
 	copy(chain, g)
 	chain[len(g)] = fn
-	return func(rw http.ResponseWriter, req *http.Request) {
+	return func(rw http.ResponseWriter, req *http.Request, p httprouter.Params) {
 		defer func() {
 			if v := recover(); v != nil {
 				buf := make([]byte, 4096)
@@ -152,7 +142,7 @@ func (r *WRoute) Warp(g HTTPGroup, fn func(*HTTPContext)) func(http.ResponseWrit
 		c := HTTPContextPool.Get().(*HTTPContext)
 		c.index = 0
 		c.chain = chain
-		c.vars = mux.Vars(req)
+		c.vars = p
 		c.Writer = rw
 		c.Request = req
 		c.route = r
@@ -161,10 +151,10 @@ func (r *WRoute) Warp(g HTTPGroup, fn func(*HTTPContext)) func(http.ResponseWrit
 	}
 }
 
-//HTTPMiddleware 中间件
+// HTTPMiddleware 中间件
 func HTTPMiddleware(m ...func(*HTTPContext)) HTTPGroup {
 	return m
 }
 
-// https://github.com/julienschmidt/httprouter
 // https://mp.weixin.qq.com/s/9P1AV6d_Cc4pH9DNJeEHHg
+// https://www.cnblogs.com/cheyunhua/p/15545261.html
