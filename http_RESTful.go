@@ -22,6 +22,8 @@ type HTTPGroup = []func(*HTTPContext)
 type HTTPContext struct {
 	index   int
 	chain   HTTPGroup
+	mu      sync.RWMutex
+	keys    map[string]any
 	vars    Vars
 	Writer  http.ResponseWriter
 	Request *http.Request
@@ -32,6 +34,24 @@ var HTTPContextPool = sync.Pool{
 	New: func() interface{} {
 		return &HTTPContext{}
 	},
+}
+
+// Set 上下文key-value值
+func (c *HTTPContext) Set(k string, v any) {
+	c.mu.Lock()
+	if c.keys == nil {
+		c.keys = make(map[string]any)
+	}
+	c.keys[k] = v
+	c.mu.Unlock()
+}
+
+// Get 上下文key-value值
+func (c *HTTPContext) Get(k string) (v any, b bool) {
+	c.mu.RLock()
+	v, b = c.keys[k]
+	c.mu.RUnlock()
+	return
 }
 
 // Params 请求参数
