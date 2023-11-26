@@ -8,24 +8,23 @@ import (
 	"testing"
 	"time"
 
+	"github.com/golang-jwt/jwt/v4"
 	"github.com/julienschmidt/httprouter"
 )
 
-func TestJWT(t *testing.T) {
-	jwt := JWT{TokenSigningKey: []byte("TokenSigningKey"), TokenExpires: time.Duration(time.Second)}
-	group := HTTPMiddleware(jwt.JWTMiddleware())
+func TestJWTMiddleware(t *testing.T) {
+	j := JWT{TokenSigningKey: []byte("TokenSigningKey"), TokenExpires: time.Duration(time.Second)}
 	r := &WRoute{router: httprouter.New()}
 	fn := func(c *HTTPContext) {
-		tokenString := c.Request.Header["Authorization"][0]
-		data, err := jwt.TokenParse(tokenString)
-		if err != nil {
-			t.Fatal(err)
+		claims, ok := c.Get("claims")
+		if !ok {
+			t.Fatal("claims缺失")
 		}
-		if data.(float64) != 1920 {
+		if claims.(jwt.MapClaims)["id"].(float64) != 1920 {
 			t.Fatal("不等于1920")
 		}
 	}
-	r.POST(group, "/", fn)
+	r.POST("/", j.JWTMiddleware(), fn)
 	ts := httptest.NewServer(r.router)
 	defer ts.Close()
 	//不带token
@@ -42,12 +41,13 @@ func TestJWT(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.EqualFold(string(data), "token need") {
-		t.Fatal("没拦截")
+	if !strings.EqualFold(string(data), "缺少令牌") {
+		t.Fatalf("expected %v got %v", "缺少令牌", string(data))
 	}
 	//带token
-	id := 1920
-	token, err := jwt.CreateToken(id)
+	key := []string{"id"}
+	obj := []any{1920}
+	token, err := j.CreateToken(key, obj)
 	if err != nil {
 		t.Fatal(err)
 	}

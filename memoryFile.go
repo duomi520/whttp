@@ -10,7 +10,6 @@ import (
 
 	"html/template"
 	"io"
-	"io/ioutil"
 	"sync"
 
 	"github.com/duomi520/utils"
@@ -50,7 +49,7 @@ func (mf *MemoryFile) DeleteFile(file string) {
 }
 
 func (mf *MemoryFile) cacheFile(file string) error {
-	data, err := ioutil.ReadFile("." + file)
+	data, err := os.ReadFile("." + file)
 	if err != nil {
 		return err
 	}
@@ -60,7 +59,7 @@ func (mf *MemoryFile) cacheFile(file string) error {
 }
 
 // CacheFile 缓存单个静态文件
-func (r *WRoute) CacheFile(group HTTPGroup, file string, mf *MemoryFile) error {
+func (r *WRoute) CacheFile(file string, mf *MemoryFile, group ...func(*HTTPContext)) error {
 	err := mf.cacheFile(file)
 	if err != nil {
 		return err
@@ -71,13 +70,14 @@ func (r *WRoute) CacheFile(group HTTPGroup, file string, mf *MemoryFile) error {
 			c.String(utils.StatusInternalServerError, err.Error())
 		}
 	}
-	r.GET(group, file, fn)
+	group = append(group, fn)
+	r.router.GET(file, r.warp(group))
 	return nil
 }
 
 // CacheFS 当客户端以GET方法请求dir目录时，将返回缓存中的文件
 
-func (r *WRoute) CacheFS(group HTTPGroup, dir string, mf *MemoryFile) error {
+func (r *WRoute) CacheFS(dir string, mf *MemoryFile, group ...func(*HTTPContext)) error {
 	//遍历目录，读出文件名
 	err := filepath.Walk(dir, func(p string, fi os.FileInfo, err error) error {
 		if fi == nil {
@@ -95,10 +95,10 @@ func (r *WRoute) CacheFS(group HTTPGroup, dir string, mf *MemoryFile) error {
 					c.String(utils.StatusInternalServerError, err.Error())
 				}
 			}
-			r.GET(group, np[:len(np)-5], fn)
+			r.router.GET(np[:len(np)-5], r.warp(append(group, fn)))
 			return nil
 		}
-		e := r.CacheFile(group, np, mf)
+		e := r.CacheFile(np, mf, group...)
 		return e
 	})
 	return err

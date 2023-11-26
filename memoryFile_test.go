@@ -41,7 +41,7 @@ func TestTemplate(t *testing.T) {
 func TestCacheFile(t *testing.T) {
 	welcome := "Welcome to the page!"
 	r := &WRoute{router: httprouter.New()}
-	err := r.CacheFile(nil, "/txt/welcome.txt", &mf)
+	err := r.CacheFile("/txt/welcome.txt", &mf)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -68,7 +68,7 @@ func TestCacheFS(t *testing.T) {
 		t.Fatal(err)
 	}
 	r := &WRoute{router: httprouter.New()}
-	err = r.CacheFS(nil, "txt", &mf)
+	err = r.CacheFS("txt", &mf)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -91,7 +91,7 @@ func TestCacheFS(t *testing.T) {
 			t.Fatal(err)
 		}
 		if !strings.EqualFold(tests[i][1], string(data)) {
-			t.Errorf("expected %s got %s", tests[i][1], string(data))
+			t.Errorf("%d expected %s got %s", i, tests[i][1], string(data))
 		}
 	}
 	resp, err := http.Get(ts.URL + "/txt/hi")

@@ -20,7 +20,7 @@ func TestFormValue(t *testing.T) {
 			c.String(http.StatusOK, "NG")
 		}
 	}
-	r.POST(nil, "/", fn)
+	r.POST("/", fn)
 	ts := httptest.NewServer(r.router)
 	defer ts.Close()
 	res, err := http.Post(ts.URL, "application/x-www-form-urlencoded",
@@ -47,7 +47,7 @@ func TestParams(t *testing.T) {
 			c.String(http.StatusOK, "NG")
 		}
 	}
-	r.GET(nil, "/user/:name/mobile/:mobile", fn)
+	r.GET("/user/:name/mobile/:mobile", fn)
 	ts := httptest.NewServer(r.router)
 	defer ts.Close()
 	res, err := http.Get(ts.URL + "/user/linda/mobile/xxxxxxxx")
@@ -89,11 +89,10 @@ func TestMiddleware(t *testing.T) {
 			signature += "C2"
 		}
 	}
-	group := HTTPMiddleware(MiddlewareA(), MiddlewareB(), MiddlewareC())
 	fn := func(c *HTTPContext) {
 		signature += "<->"
 	}
-	r.POST(group, "/", fn)
+	r.POST("/", MiddlewareA(), MiddlewareB(), MiddlewareC(), fn)
 	ts := httptest.NewServer(r.router)
 	defer ts.Close()
 	_, err := http.Post(ts.URL, "application/x-www-form-urlencoded",

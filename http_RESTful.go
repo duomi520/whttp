@@ -16,12 +16,10 @@ type Vars interface {
 	ByName(string) string
 }
 
-type HTTPGroup = []func(*HTTPContext)
-
 // HTTPContext 上下文
 type HTTPContext struct {
 	index   int
-	chain   HTTPGroup
+	chain   []func(*HTTPContext)
 	mu      sync.RWMutex
 	keys    map[string]any
 	vars    Vars
@@ -48,6 +46,9 @@ func (c *HTTPContext) Set(k string, v any) {
 
 // Get 上下文key-value值
 func (c *HTTPContext) Get(k string) (v any, b bool) {
+	if c.keys == nil {
+		return
+	}
 	c.mu.RLock()
 	v, b = c.keys[k]
 	c.mu.RUnlock()
@@ -128,25 +129,22 @@ func NewRoute(v utils.IValidator, log utils.ILogger) *WRoute {
 }
 
 // GET g
-func (r *WRoute) GET(g HTTPGroup, pattern string, fn func(*HTTPContext)) {
-	r.router.GET(pattern, r.warp(g, fn))
+func (r *WRoute) GET(pattern string, fn ...func(*HTTPContext)) {
+	r.router.GET(pattern, r.warp(fn))
 }
 
 // POST p
-func (r *WRoute) POST(g HTTPGroup, pattern string, fn func(*HTTPContext)) {
-	r.router.POST(pattern, r.warp(g, fn))
+func (r *WRoute) POST(pattern string, fn ...func(*HTTPContext)) {
+	r.router.POST(pattern, r.warp(fn))
 }
 
 // DELETE d
-func (r *WRoute) DELETE(g HTTPGroup, pattern string, fn func(*HTTPContext)) {
-	r.router.DELETE(pattern, r.warp(g, fn))
+func (r *WRoute) DELETE(pattern string, fn ...func(*HTTPContext)) {
+	r.router.DELETE(pattern, r.warp(fn))
 }
 
 // warp 封装
-func (r *WRoute) warp(g HTTPGroup, fn func(*HTTPContext)) func(http.ResponseWriter, *http.Request, httprouter.Params) {
-	chain := make(HTTPGroup, len(g)+1)
-	copy(chain, g)
-	chain[len(g)] = fn
+func (r *WRoute) warp(g []func(*HTTPContext)) func(http.ResponseWriter, *http.Request, httprouter.Params) {
 	return func(rw http.ResponseWriter, req *http.Request, p httprouter.Params) {
 		defer func() {
 			if v := recover(); v != nil {
@@ -161,7 +159,7 @@ func (r *WRoute) warp(g HTTPGroup, fn func(*HTTPContext)) func(http.ResponseWrit
 		}()
 		c := HTTPContextPool.Get().(*HTTPContext)
 		c.index = 0
-		c.chain = chain
+		c.chain = g
 		c.vars = p
 		c.Writer = rw
 		c.Request = req
@@ -171,10 +169,5 @@ func (r *WRoute) warp(g HTTPGroup, fn func(*HTTPContext)) func(http.ResponseWrit
 	}
 }
 
-// HTTPMiddleware 中间件
-func HTTPMiddleware(m ...func(*HTTPContext)) HTTPGroup {
-	return m
-}
-
-// https://mp.weixin.qq.com/s/9P1AV6d_Cc4pH9DNJeEHHg
+// https://mp.weixin.qq.com/s/n-kU6nwhOH6ouhufrP_1kQ
 // https://www.cnblogs.com/cheyunhua/p/15545261.html

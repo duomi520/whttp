@@ -18,10 +18,9 @@ func TestValidatorMiddleware(t *testing.T) {
 			t.Fatal(c.vars.ByName("number"))
 		}
 	}
-	group := HTTPMiddleware(ValidatorMiddleware("number:numeric"))
 	mr := httprouter.New()
 	r := &WRoute{router: mr, validatorVar: v.Var, validatorStruct: v.Struct}
-	r.POST(group, "/number/:number", fn)
+	r.POST("/number/:number", ValidatorMiddleware("number:numeric"), fn)
 	ts := httptest.NewServer(mr)
 	defer ts.Close()
 	resp, err := http.Post(ts.URL+"/number/777", "application/x-www-form-urlencoded",

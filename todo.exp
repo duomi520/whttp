@@ -18,10 +18,4 @@ func RecoveryWithWriter(out io.Writer) HandlerFunc
 func WrapF(f http.HandlerFunc) HandlerFunc //将http.HandlerFunc包装成中间件
 func WrapH(h http.Handler) HandlerFunc //将http.Handler包装成中间件
 
-- gin内置的几个中断用户请求的方法: 返回200,但body里没数据
-func (c *Context) Abort()
-func (c *Context) AbortWithError(code int, err error) *Error
-func (c *Context) AbortWithStatus(code int)
-func (c *Context) AbortWithStatusJSON(code int, jsonObj interface{}) //中断请求后,返回json格式的数据
-
 https://github.com/gin-gonic/contrib 库中整理很多常用的中间件，可以直接使用
