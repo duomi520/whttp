@@ -23,8 +23,8 @@ func TestIPAdmission(t *testing.T) {
 		{"2001:db9::1", false},
 	}
 	for i := range tests {
-		data := list.Check(tests[i][0].(string))
-		if tests[i][1].(bool) != bool(data) {
+		data := list.Check(tests[i][0].(string)).(bool)
+		if tests[i][1].(bool) != data {
 			t.Errorf("%s expected %v got %v", tests[i][0], tests[i][1], data)
 		}
 	}
@@ -56,7 +56,18 @@ func TestWhitelistMiddleware(t *testing.T) {
 	}
 }
 
-func BenchmarkIPFiltering(b *testing.B) {
+func BenchmarkCheckByCache(b *testing.B) {
+	list := NewIPAdmission(10)
+	list.ParseNode("127.0.0.1")
+	list.ParseNode("192.168.0.1")
+	list.ParseNode("10.40.68.0/24")
+	list.ParseNode("10.40.69.0/24")
+	list.ParseNode("10.40.70.0/24")
+	for i := 0; i < b.N; i++ {
+		list.CheckByCache("10.40.68.55")
+	}
+}
+func BenchmarkCheck(b *testing.B) {
 	list := NewIPAdmission(10)
 	list.ParseNode("127.0.0.1")
 	list.ParseNode("192.168.0.1")
