@@ -8,20 +8,18 @@ import (
 	"testing"
 
 	"github.com/go-playground/validator"
-	"github.com/julienschmidt/httprouter"
 )
 
 func TestValidatorMiddleware(t *testing.T) {
 	v := validator.New()
 	fn := func(c *HTTPContext) {
-		if !strings.EqualFold(c.vars.ByName("number"), "777") {
-			t.Fatal(c.vars.ByName("number"))
+		if !strings.EqualFold(c.Request.PathValue("number"), "777") {
+			t.Fatal(c.Request.PathValue("number"))
 		}
 	}
-	mr := httprouter.New()
-	r := &WRoute{router: mr, validatorVar: v.Var, validatorStruct: v.Struct}
-	r.POST("/number/:number", ValidatorMiddleware("number:numeric"), fn)
-	ts := httptest.NewServer(mr)
+	r := &WRoute{mux: http.NewServeMux(), validatorVar: v.Var, validatorStruct: v.Struct}
+	r.POST("/number/{number}", ValidatorMiddleware("number:numeric"), fn)
+	ts := httptest.NewServer(r.mux)
 	defer ts.Close()
 	resp, err := http.Post(ts.URL+"/number/777", "application/x-www-form-urlencoded",
 		strings.NewReader(""))

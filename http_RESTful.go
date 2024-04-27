@@ -6,15 +6,17 @@ import (
 	"io"
 	"net/http"
 	"runtime"
+	"strings"
 	"sync"
 
 	"github.com/duomi520/utils"
-	"github.com/julienschmidt/httprouter"
 )
 
-type Vars interface {
-	ByName(string) string
-}
+// DefaultMarshal 缺省JSON编码器
+var DefaultMarshal func(any) ([]byte, error) = json.Marshal
+
+// DefaultUnmarshal 缺省JSON解码器
+var DefaultUnmarshal func([]byte, any) error = json.Unmarshal
 
 // HTTPContext 上下文
 type HTTPContext struct {
@@ -22,7 +24,6 @@ type HTTPContext struct {
 	chain   []func(*HTTPContext)
 	mu      sync.RWMutex
 	keys    map[string]any
-	vars    Vars
 	Writer  http.ResponseWriter
 	Request *http.Request
 	route   *WRoute
@@ -55,18 +56,13 @@ func (c *HTTPContext) Get(k string) (v any, b bool) {
 	return
 }
 
-// Params 请求参数
-func (c *HTTPContext) Params(s string) string {
-	return c.vars.ByName(s)
-}
-
 // BindJSON 绑定JSON数据
 func (c *HTTPContext) BindJSON(v any) error {
 	buf, err := io.ReadAll(c.Request.Body)
 	if err != nil {
 		return fmt.Errorf("readAll faile: %w", err)
 	}
-	err = json.Unmarshal(buf, v)
+	err = DefaultUnmarshal(buf, v)
 	if err != nil {
 		return fmt.Errorf("unmarshal %v faile: %w", v, err)
 	}
@@ -85,7 +81,7 @@ func (c *HTTPContext) String(status int, msg string) {
 
 // JSON 带有状态码的JSON 数据
 func (c *HTTPContext) JSON(status int, v any) {
-	d, err := json.Marshal(v)
+	d, err := DefaultMarshal(v)
 	if err != nil {
 		c.String(http.StatusInternalServerError, err.Error())
 		return
@@ -104,7 +100,7 @@ func (c *HTTPContext) Next() {
 // WRoute 路由
 type WRoute struct {
 	DebugMode bool
-	router    *httprouter.Router
+	mux       *http.ServeMux
 	//validator
 	validatorVar    func(any, string) error
 	validatorStruct func(any) error
@@ -115,7 +111,7 @@ type WRoute struct {
 // NewRoute 新建
 func NewRoute(v utils.IValidator, log utils.ILogger) *WRoute {
 	r := WRoute{}
-	r.router = httprouter.New()
+	r.mux = http.NewServeMux()
 	if v == nil {
 		panic("Validator is nil")
 	}
@@ -130,22 +126,22 @@ func NewRoute(v utils.IValidator, log utils.ILogger) *WRoute {
 
 // GET g
 func (r *WRoute) GET(pattern string, fn ...func(*HTTPContext)) {
-	r.router.GET(pattern, r.warp(fn))
+	r.mux.HandleFunc(pattern, r.warp(fn, "GET"))
 }
 
 // POST p
 func (r *WRoute) POST(pattern string, fn ...func(*HTTPContext)) {
-	r.router.POST(pattern, r.warp(fn))
+	r.mux.HandleFunc(pattern, r.warp(fn, "POST"))
 }
 
 // DELETE d
 func (r *WRoute) DELETE(pattern string, fn ...func(*HTTPContext)) {
-	r.router.DELETE(pattern, r.warp(fn))
+	r.mux.HandleFunc(pattern, r.warp(fn, "DELETE"))
 }
 
 // warp 封装
-func (r *WRoute) warp(g []func(*HTTPContext)) func(http.ResponseWriter, *http.Request, httprouter.Params) {
-	return func(rw http.ResponseWriter, req *http.Request, p httprouter.Params) {
+func (r *WRoute) warp(g []func(*HTTPContext), method string) func(http.ResponseWriter, *http.Request) {
+	return func(rw http.ResponseWriter, req *http.Request) {
 		defer func() {
 			if v := recover(); v != nil {
 				buf := make([]byte, 4096)
@@ -156,11 +152,14 @@ func (r *WRoute) warp(g []func(*HTTPContext)) func(http.ResponseWriter, *http.Re
 					rw.Write(buf[:lenght])
 				}
 			}
+			if !strings.EqualFold(method, req.Method) {
+				r.logger.Error(fmt.Sprintf("This is not a %s request.\n", req.Method))
+				return
+			}
 		}()
 		c := HTTPContextPool.Get().(*HTTPContext)
 		c.index = 0
 		c.chain = g
-		c.vars = p
 		c.Writer = rw
 		c.Request = req
 		c.route = r
@@ -170,4 +169,4 @@ func (r *WRoute) warp(g []func(*HTTPContext)) func(http.ResponseWriter, *http.Re
 }
 
 // https://mp.weixin.qq.com/s/n-kU6nwhOH6ouhufrP_1kQ
-// https://www.cnblogs.com/cheyunhua/p/15545261.html
+// https://zhuanlan.zhihu.com/p/679527662

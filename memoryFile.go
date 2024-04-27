@@ -71,7 +71,7 @@ func (r *WRoute) CacheFile(file string, mf *MemoryFile, group ...func(*HTTPConte
 		}
 	}
 	group = append(group, fn)
-	r.router.GET(file, r.warp(group))
+	r.mux.HandleFunc(file, r.warp(group, "GET"))
 	return nil
 }
 
@@ -95,7 +95,7 @@ func (r *WRoute) CacheFS(dir string, mf *MemoryFile, group ...func(*HTTPContext)
 					c.String(utils.StatusInternalServerError, err.Error())
 				}
 			}
-			r.router.GET(np[:len(np)-5], r.warp(append(group, fn)))
+			r.mux.HandleFunc(np[:len(np)-5], r.warp(append(group, fn), "GET"))
 			return nil
 		}
 		e := r.CacheFile(np, mf, group...)

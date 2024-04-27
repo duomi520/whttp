@@ -9,12 +9,11 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v4"
-	"github.com/julienschmidt/httprouter"
 )
 
 func TestJWTMiddleware(t *testing.T) {
 	j := JWT{TokenSigningKey: []byte("TokenSigningKey"), TokenExpires: time.Duration(time.Second)}
-	r := &WRoute{router: httprouter.New()}
+	r := &WRoute{mux: http.NewServeMux()}
 	fn := func(c *HTTPContext) {
 		claims, ok := c.Get("claims")
 		if !ok {
@@ -25,7 +24,7 @@ func TestJWTMiddleware(t *testing.T) {
 		}
 	}
 	r.POST("/", j.JWTMiddleware(), fn)
-	ts := httptest.NewServer(r.router)
+	ts := httptest.NewServer(r.mux)
 	defer ts.Close()
 	//不带token
 	req, err := http.NewRequest("POST", ts.URL, nil)

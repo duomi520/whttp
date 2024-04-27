@@ -7,8 +7,6 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
-
-	"github.com/julienschmidt/httprouter"
 )
 
 var mf MemoryFile
@@ -40,12 +38,12 @@ func TestTemplate(t *testing.T) {
 
 func TestCacheFile(t *testing.T) {
 	welcome := "Welcome to the page!"
-	r := &WRoute{router: httprouter.New()}
+	r := &WRoute{mux: http.NewServeMux()}
 	err := r.CacheFile("/txt/welcome.txt", &mf)
 	if err != nil {
 		t.Fatal(err)
 	}
-	ts := httptest.NewServer(r.router)
+	ts := httptest.NewServer(r.mux)
 	defer ts.Close()
 	res, err := http.Get(ts.URL + "/txt/welcome.txt")
 	if err != nil {
@@ -67,12 +65,12 @@ func TestCacheFS(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	r := &WRoute{router: httprouter.New()}
+	r := &WRoute{mux: http.NewServeMux()}
 	err = r.CacheFS("txt", &mf)
 	if err != nil {
 		t.Fatal(err)
 	}
-	ts := httptest.NewServer(r.router)
+	ts := httptest.NewServer(r.mux)
 	defer ts.Close()
 	tests := [][2]string{
 		{"/txt/a.txt", "a"},

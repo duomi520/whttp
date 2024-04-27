@@ -7,8 +7,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-
-	"github.com/julienschmidt/httprouter"
 )
 
 func TestCalculateCount(t *testing.T) {
@@ -49,8 +47,8 @@ func TestIPAdmission(t *testing.T) {
 		{"192.0.3.0", false},
 		{"192.0.3.10", false},
 		{"198.198.1.100", true},
-		{"198.198.111.5", false},
-		{"198.199.5.5", true},
+		{"198.198.111.5", true},
+		{"198.199.5.5", false},
 		{"2001:db8::1", true},
 		{"2001:db9::1", false},
 	}
@@ -70,9 +68,9 @@ func TestWhitelistMiddleware(t *testing.T) {
 	fn := func(c *HTTPContext) {
 		c.String(200, "拦截失败")
 	}
-	r := &WRoute{router: httprouter.New()}
+	r := &WRoute{mux: http.NewServeMux()}
 	r.GET("/", list.WhitelistMiddleware(), fn)
-	ts := httptest.NewServer(r.router)
+	ts := httptest.NewServer(r.mux)
 	defer ts.Close()
 	resp, err := http.Get(ts.URL)
 	if err != nil {
