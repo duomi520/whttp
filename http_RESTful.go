@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"runtime"
 	"strings"
@@ -33,6 +34,19 @@ var HTTPContextPool = sync.Pool{
 	New: func() interface{} {
 		return &HTTPContext{}
 	},
+}
+
+func (c *HTTPContext) Debug(msg string, args ...any) {
+	c.route.logger.Debug(msg, args...)
+}
+func (c *HTTPContext) Info(msg string, args ...any) {
+	c.route.logger.Info(msg, args...)
+}
+func (c *HTTPContext) Warn(msg string, args ...any) {
+	c.route.logger.Warn(msg, args...)
+}
+func (c *HTTPContext) Error(msg string, args ...any) {
+	c.route.logger.Error(msg, args...)
 }
 
 // Set 上下文key-value值
@@ -99,17 +113,17 @@ func (c *HTTPContext) Next() {
 
 // WRoute 路由
 type WRoute struct {
-	DebugMode bool
+	debugMode bool
 	mux       *http.ServeMux
 	//validator
 	validatorVar    func(any, string) error
 	validatorStruct func(any) error
 	//logger
-	logger utils.ILogger
+	logger *slog.Logger
 }
 
 // NewRoute 新建
-func NewRoute(v utils.IValidator, log utils.ILogger) *WRoute {
+func NewRoute(v utils.IValidator, l *slog.Logger) *WRoute {
 	r := WRoute{}
 	r.mux = http.NewServeMux()
 	if v == nil {
@@ -117,11 +131,15 @@ func NewRoute(v utils.IValidator, log utils.ILogger) *WRoute {
 	}
 	r.validatorVar = v.Var
 	r.validatorStruct = v.Struct
-	if log == nil {
+	if l == nil {
 		panic("Logger is nil")
 	}
-	r.logger = log
+	r.logger = l
 	return &r
+}
+
+func (r *WRoute) SetDebugMode(b bool) {
+	r.debugMode = b
 }
 
 // GET g
@@ -146,17 +164,17 @@ func (r *WRoute) warp(g []func(*HTTPContext), method string) func(http.ResponseW
 			if v := recover(); v != nil {
 				buf := make([]byte, 4096)
 				lenght := runtime.Stack(buf, false)
-				r.logger.Error(fmt.Sprintf("WRoute.warp %v \n%s", v, buf[:lenght]))
-				if r.DebugMode {
+				r.logger.Error(fmt.Sprintf(" %v \n%s", v, buf[:lenght]))
+				if r.debugMode {
 					rw.Write([]byte("\n"))
 					rw.Write(buf[:lenght])
 				}
 			}
-			if !strings.EqualFold(method, req.Method) {
-				r.logger.Error(fmt.Sprintf("This is not a %s request.\n", req.Method))
-				return
-			}
 		}()
+		if !strings.EqualFold(method, req.Method) {
+			r.logger.Error(fmt.Sprintf("not a %s request", req.Method))
+			return
+		}
 		c := HTTPContextPool.Get().(*HTTPContext)
 		c.index = 0
 		c.chain = g

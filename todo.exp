@@ -19,3 +19,6 @@ func WrapF(f http.HandlerFunc) HandlerFunc //将http.HandlerFunc包装成中间�
 func WrapH(h http.Handler) HandlerFunc //将http.Handler包装成中间件
 
 https://github.com/gin-gonic/contrib 库中整理很多常用的中间件，可以直接使用
+
+ 3 个 Go 安全库
+https://zhuanlan.zhihu.com/p/695204319

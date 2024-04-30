@@ -1,18 +1,17 @@
 package whttp
 
 import (
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
-
-	"github.com/duomi520/utils"
 )
 
 func TestLoggerMiddleware(t *testing.T) {
-	logger, _ := utils.NewWLogger(utils.DebugLevel, "")
+	slog.SetLogLoggerLevel(slog.LevelDebug)
 	fn := func(c *HTTPContext) {}
-	r := &WRoute{mux: http.NewServeMux(), logger: logger}
+	r := &WRoute{mux: http.NewServeMux()}
 	r.POST("/p", LoggerMiddleware(), fn)
 	r.GET("/g", LoggerMiddleware(), fn)
 	ts := httptest.NewServer(r.mux)
@@ -29,6 +28,6 @@ func TestLoggerMiddleware(t *testing.T) {
 }
 
 /*
-[Debug] 2024-04-27 13:40:57 |            0s | 127.0.0.1:54783 |     0 |    POST | /p |
-[Debug] 2024-04-27 13:40:57 |            0s | 127.0.0.1:54783 |     0 |     GET | /g |
+2024/04/30 22:31:16 DEBUG |            0s | 127.0.0.1:54122 |     0 |    POST | /p |
+2024/04/30 22:31:16 DEBUG |            0s | 127.0.0.1:54122 |     0 |     GET | /g |
 */

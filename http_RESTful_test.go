@@ -3,12 +3,13 @@ package whttp
 import (
 	"bytes"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
-
-	"github.com/duomi520/utils"
+	"time"
 )
 
 func TestFormValue(t *testing.T) {
@@ -107,7 +108,16 @@ func TestMiddleware(t *testing.T) {
 
 func TestMethod(t *testing.T) {
 	r := &WRoute{mux: http.NewServeMux()}
-	r.logger, _ = utils.NewWLogger(utils.InfoLevel, "")
+	r.logger = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
+		ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
+			if a.Key == slog.TimeKey {
+				if t, ok := a.Value.Any().(time.Time); ok {
+					a.Value = slog.StringValue(t.Format(time.DateTime))
+				}
+			}
+			return a
+		},
+	}))
 	fn := func(c *HTTPContext) {}
 	r.GET("/", fn)
 	ts := httptest.NewServer(r.mux)
@@ -119,5 +129,5 @@ func TestMethod(t *testing.T) {
 }
 
 /*
-[Error] 2024-04-27 13:19:02 This is not a POST request.
+time="2024-05-01 00:15:08" level=ERROR msg="not a POST request"
 */
