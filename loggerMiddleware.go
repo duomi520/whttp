@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"strconv"
 	"time"
 )
 
@@ -26,10 +27,10 @@ func LoggerMiddleware() func(*HTTPContext) {
 			if rw.err != nil {
 				slog.Error(fmt.Sprintf(formatLogger, latency, c.Request.RemoteAddr, rw.status, c.Request.Method, c.Request.URL, rw.err.Error()))
 			} else {
-				slog.Warn(fmt.Sprintf(formatLogger, latency, c.Request.RemoteAddr, rw.status, c.Request.Method, c.Request.URL, rw.result))
+				slog.Warn(fmt.Sprintf(formatLogger, latency, c.Request.RemoteAddr, rw.status, c.Request.Method, c.Request.URL, strconv.Itoa(rw.length)))
 			}
 		} else {
-			slog.Debug(fmt.Sprintf(formatLogger, latency, c.Request.RemoteAddr, rw.status, c.Request.Method, c.Request.URL, rw.result))
+			slog.Debug(fmt.Sprintf(formatLogger, latency, c.Request.RemoteAddr, rw.status, c.Request.Method, c.Request.URL, strconv.Itoa(rw.length)))
 		}
 	}
 }
@@ -37,7 +38,7 @@ func LoggerMiddleware() func(*HTTPContext) {
 // httpLoggerResponseWriter d
 type httpLoggerResponseWriter struct {
 	status int
-	result []byte
+	length int
 	err    error
 	w      http.ResponseWriter
 }
@@ -56,7 +57,7 @@ func (h *httpLoggerResponseWriter) WriteHeader(s int) {
 // Write 向连接中写入作为HTTP的一部分回复的数据
 func (h *httpLoggerResponseWriter) Write(d []byte) (int, error) {
 	n, err := h.w.Write(d)
-	h.result = d
+	h.length = len(d)
 	h.err = err
 	return n, err
 }

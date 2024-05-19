@@ -132,9 +132,10 @@ func NewRoute(v utils.IValidator, l *slog.Logger) *WRoute {
 	r.validatorVar = v.Var
 	r.validatorStruct = v.Struct
 	if l == nil {
-		panic("Logger is nil")
+		r.logger = slog.Default()
+	} else {
+		r.logger = l
 	}
-	r.logger = l
 	return &r
 }
 
