@@ -13,7 +13,7 @@ import (
 
 func TestJWTMiddleware(t *testing.T) {
 	j := JWT{TokenSigningKey: []byte("TokenSigningKey"), TokenExpires: time.Duration(time.Second)}
-	r := &WRoute{mux: http.NewServeMux()}
+	r := &WRoute{Mux: http.NewServeMux()}
 	fn := func(c *HTTPContext) {
 		claims, ok := c.Get("claims")
 		if !ok {
@@ -24,7 +24,7 @@ func TestJWTMiddleware(t *testing.T) {
 		}
 	}
 	r.POST("/", j.JWTMiddleware(), fn)
-	ts := httptest.NewServer(r.mux)
+	ts := httptest.NewServer(r.Mux)
 	defer ts.Close()
 	//不带token
 	req, err := http.NewRequest("POST", ts.URL, nil)

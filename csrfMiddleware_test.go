@@ -5,36 +5,34 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
-
 	"testing"
 
-	"github.com/duomi520/utils"
 	"github.com/gorilla/csrf"
-	"github.com/julienschmidt/httprouter"
 )
 
-func getCSRF(w http.ResponseWriter, r *http.Request) {
+func getCSRF(c *HTTPContext) {
 	// 获取token值
-	token := csrf.Token(r)
+	token := csrf.Token(c.Request)
 	// 将token写入到header中
-	w.Header().Set("X-CSRF-Token", token)
-	fmt.Fprintln(w, "hello")
+	c.Writer.Header().Set("X-CSRF-Token", token)
+	// 业务代码
+	fmt.Fprintln(c.Writer, "hello")
 }
 
-func postCSRF(w http.ResponseWriter, r *http.Request) {
-	token := csrf.Token(r)
-	w.Header().Set("X-CSRF-Token", token)
-	fmt.Fprintln(w, "<1>")
+func postCSRF(c *HTTPContext) {
+	token := csrf.Token(c.Request)
+	c.Writer.Header().Set("X-CSRF-Token", token)
+	// 业务代码
+	fmt.Fprintln(c.Writer, "<1>")
 }
 
 func TestCSRFMiddleware(t *testing.T) {
-	logger, _ := utils.NewWLogger(utils.DebugLevel, "")
-	r := &WRoute{router: httprouter.New(), logger: logger}
+	r := &WRoute{Mux: http.NewServeMux()}
 	csrfMiddleware := csrf.Protect([]byte("32-byte-long-auth-key"))
-	r.router.Use(csrfMiddleware)
-	r.router.HandleFunc("/a", getCSRF)
-	r.router.HandleFunc("/c", postCSRF)
-	ts := httptest.NewServer(r.router)
+	r.GET("/a", getCSRF)
+	r.POST("/c", postCSRF)
+	//csrfMiddleware 默认只对POST验证
+	ts := httptest.NewServer(csrfMiddleware(r.Mux))
 	defer ts.Close()
 	//先get
 	res, err := http.Get(ts.URL + "/a")
@@ -59,12 +57,12 @@ func TestCSRFMiddleware(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode != 403 {
+	if resp.StatusCode != http.StatusForbidden {
 		t.Fatal(resp.Status)
 	}
-	//t.Log(resp)
+	//fmt.Println(resp)
+	fmt.Println("1 ", resp.Header.Get("X-CSRF-Token"))
 	//带token
-	logger.Debug(resp.Header.Get("X-CSRF-Token"))
 	req.Header.Set("Cookie", cookies[0].String())
 	req.Header.Set("X-CSRF-Token", token)
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
@@ -72,24 +70,24 @@ func TestCSRFMiddleware(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if resp.StatusCode != 200 {
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
 		t.Fatal(resp.Status)
 	}
 	data, err := io.ReadAll(resp.Body)
 	if err != nil {
 		t.Fatal(err)
 	}
-	resp.Body.Close()
-	logger.Debug(string(data))
-	//t.Log(resp)
-	logger.Debug(resp.Header.Get("X-CSRF-Token"))
+	fmt.Println("2 ", string(data))
+	fmt.Println("3 ", resp.Header.Get("X-CSRF-Token"))
+	//fmt.Println(resp)
 }
 
 /*
-[Debug] 2022-10-30 07:45:56
-[Debug] 2022-10-30 07:45:56 <1>
+1
+2  <1>
 
-[Debug] 2022-10-30 07:45:56 v+kcCp+s+9ldC/a/jAeqZcD2D41k/NV5JIfZ3E2mUEd79WpH56vPM+PEYKFvrMKUkspVhLVs8EDCO9zSLylv4Q==
+3  nXS7COmuLabTPdqddS3ujNU+1zWJ2J+eQWNgA76xE0VPgcrp2/ua4rJ5GVwpCgPXMRQRy2KVlRjesPXXQZTtnQ==
 */
 
 // https://studygolang.com/articles/35927

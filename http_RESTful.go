@@ -114,7 +114,7 @@ func (c *HTTPContext) Next() {
 // WRoute 路由
 type WRoute struct {
 	debugMode bool
-	mux       *http.ServeMux
+	Mux       *http.ServeMux
 	//validator
 	validatorVar    func(any, string) error
 	validatorStruct func(any) error
@@ -125,7 +125,7 @@ type WRoute struct {
 // NewRoute 新建
 func NewRoute(v utils.IValidator, l *slog.Logger) *WRoute {
 	r := WRoute{}
-	r.mux = http.NewServeMux()
+	r.Mux = http.NewServeMux()
 	if v == nil {
 		panic("Validator is nil")
 	}
@@ -144,17 +144,22 @@ func (r *WRoute) SetDebugMode(b bool) {
 
 // GET g
 func (r *WRoute) GET(pattern string, fn ...func(*HTTPContext)) {
-	r.mux.HandleFunc(pattern, r.warp(fn, "GET"))
+	r.Mux.HandleFunc(pattern, r.warp(fn, "GET"))
 }
 
 // POST p
 func (r *WRoute) POST(pattern string, fn ...func(*HTTPContext)) {
-	r.mux.HandleFunc(pattern, r.warp(fn, "POST"))
+	r.Mux.HandleFunc(pattern, r.warp(fn, "POST"))
+}
+
+// PUT p
+func (r *WRoute) PUT(pattern string, fn ...func(*HTTPContext)) {
+	r.Mux.HandleFunc(pattern, r.warp(fn, "PUT"))
 }
 
 // DELETE d
 func (r *WRoute) DELETE(pattern string, fn ...func(*HTTPContext)) {
-	r.mux.HandleFunc(pattern, r.warp(fn, "DELETE"))
+	r.Mux.HandleFunc(pattern, r.warp(fn, "DELETE"))
 }
 
 // warp 封装

@@ -12,7 +12,7 @@ func ValidatorMiddleware(a ...string) func(*HTTPContext) {
 	for _, v := range a {
 		s := strings.Split(v, ":")
 		if len(s) != 2 {
-			panic(fmt.Sprintf("validate:bad describe %s", v))
+			panic(fmt.Sprintf("bad describe %s", v))
 		}
 		s0 = append(s0, s[0])
 		s1 = append(s1, s[1])

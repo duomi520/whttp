@@ -13,7 +13,7 @@ import (
 )
 
 func TestFormValue(t *testing.T) {
-	r := &WRoute{mux: http.NewServeMux()}
+	r := &WRoute{Mux: http.NewServeMux()}
 	fn := func(c *HTTPContext) {
 		if (strings.Compare(c.Request.FormValue("name"), "linda") == 0) && (strings.Compare(c.Request.FormValue("mobile"), "xxxxxxxx") == 0) {
 			c.String(http.StatusOK, "OK")
@@ -22,7 +22,7 @@ func TestFormValue(t *testing.T) {
 		}
 	}
 	r.POST("/", fn)
-	ts := httptest.NewServer(r.mux)
+	ts := httptest.NewServer(r.Mux)
 	defer ts.Close()
 	res, err := http.Post(ts.URL, "application/x-www-form-urlencoded",
 		strings.NewReader("name=linda&mobile=xxxxxxxx"))
@@ -40,7 +40,7 @@ func TestFormValue(t *testing.T) {
 
 }
 func TestParams(t *testing.T) {
-	r := &WRoute{mux: http.NewServeMux()}
+	r := &WRoute{Mux: http.NewServeMux()}
 	fn := func(c *HTTPContext) {
 		if (strings.Compare(c.Request.PathValue("name"), "linda") == 0) && (strings.Compare(c.Request.PathValue("mobile"), "xxxxxxxx") == 0) {
 			c.String(http.StatusOK, "OK")
@@ -49,7 +49,7 @@ func TestParams(t *testing.T) {
 		}
 	}
 	r.GET("/user/{name}/mobile/{mobile}", fn)
-	ts := httptest.NewServer(r.mux)
+	ts := httptest.NewServer(r.Mux)
 	defer ts.Close()
 	res, err := http.Get(ts.URL + "/user/linda/mobile/xxxxxxxx")
 	if err != nil {
@@ -68,7 +68,7 @@ func TestParams(t *testing.T) {
 
 func TestMiddleware(t *testing.T) {
 	signature := ""
-	r := &WRoute{mux: http.NewServeMux()}
+	r := &WRoute{Mux: http.NewServeMux()}
 	MiddlewareA := func() func(*HTTPContext) {
 		return func(c *HTTPContext) {
 			signature += "A1"
@@ -94,7 +94,7 @@ func TestMiddleware(t *testing.T) {
 		signature += "<->"
 	}
 	r.POST("/", MiddlewareA(), MiddlewareB(), MiddlewareC(), fn)
-	ts := httptest.NewServer(r.mux)
+	ts := httptest.NewServer(r.Mux)
 	defer ts.Close()
 	_, err := http.Post(ts.URL, "application/x-www-form-urlencoded",
 		strings.NewReader(""))
@@ -107,7 +107,7 @@ func TestMiddleware(t *testing.T) {
 }
 
 func TestMethod(t *testing.T) {
-	r := &WRoute{mux: http.NewServeMux()}
+	r := &WRoute{Mux: http.NewServeMux()}
 	r.logger = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
 		ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
 			if a.Key == slog.TimeKey {
@@ -120,7 +120,7 @@ func TestMethod(t *testing.T) {
 	}))
 	fn := func(c *HTTPContext) {}
 	r.GET("/", fn)
-	ts := httptest.NewServer(r.mux)
+	ts := httptest.NewServer(r.Mux)
 	defer ts.Close()
 	_, err := http.Post(ts.URL, "application/x-www-form-urlencoded", strings.NewReader(""))
 	if err != nil {

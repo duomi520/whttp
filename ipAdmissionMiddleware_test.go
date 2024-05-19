@@ -68,9 +68,9 @@ func TestWhitelistMiddleware(t *testing.T) {
 	fn := func(c *HTTPContext) {
 		c.String(200, "拦截失败")
 	}
-	r := &WRoute{mux: http.NewServeMux()}
+	r := &WRoute{Mux: http.NewServeMux()}
 	r.GET("/", list.WhitelistMiddleware(), fn)
-	ts := httptest.NewServer(r.mux)
+	ts := httptest.NewServer(r.Mux)
 	defer ts.Close()
 	resp, err := http.Get(ts.URL)
 	if err != nil {

@@ -11,10 +11,10 @@ import (
 func TestLoggerMiddleware(t *testing.T) {
 	slog.SetLogLoggerLevel(slog.LevelDebug)
 	fn := func(c *HTTPContext) {}
-	r := &WRoute{mux: http.NewServeMux()}
+	r := &WRoute{Mux: http.NewServeMux()}
 	r.POST("/p", LoggerMiddleware(), fn)
 	r.GET("/g", LoggerMiddleware(), fn)
-	ts := httptest.NewServer(r.mux)
+	ts := httptest.NewServer(r.Mux)
 	defer ts.Close()
 	_, err := http.Post(ts.URL+"/p", "application/x-www-form-urlencoded",
 		strings.NewReader(""))

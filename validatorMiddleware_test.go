@@ -17,9 +17,9 @@ func TestValidatorMiddleware(t *testing.T) {
 			t.Fatal(c.Request.PathValue("number"))
 		}
 	}
-	r := &WRoute{mux: http.NewServeMux(), validatorVar: v.Var, validatorStruct: v.Struct}
+	r := &WRoute{Mux: http.NewServeMux(), validatorVar: v.Var, validatorStruct: v.Struct}
 	r.POST("/number/{number}", ValidatorMiddleware("number:numeric"), fn)
-	ts := httptest.NewServer(r.mux)
+	ts := httptest.NewServer(r.Mux)
 	defer ts.Close()
 	resp, err := http.Post(ts.URL+"/number/777", "application/x-www-form-urlencoded",
 		strings.NewReader(""))

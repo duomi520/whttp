@@ -2,16 +2,18 @@ package whttp
 
 import (
 	"bytes"
+	"compress/gzip"
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"testing"
 )
 
 var mf MemoryFile
 
-func TestTemplate(t *testing.T) {
+func TestCacheTemplate(t *testing.T) {
 	welcome := "Welcome to the home page!"
 	mf.CacheTemplate("memoryFile.tmpl", "a", welcome)
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
@@ -36,14 +38,54 @@ func TestTemplate(t *testing.T) {
 	}
 }
 
+func TestCacheTemplateGZIP(t *testing.T) {
+	welcome := "Welcome to the home page!"
+	mf.CacheTemplateGZIP(gzip.DefaultCompression, "memoryFile.tmpl", "a", welcome)
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		if !ConfirmGZIP(req) {
+			t.Fatal("非gzip请求")
+		}
+		n, err := mf.WriteTo("a", w)
+		if err != nil {
+			t.Fatal("err: ", err.Error())
+		}
+		w.Header().Set("Content-Encoding", "gzip")
+		w.Header().Set("Vary", "Accept-Encoding")
+		w.Header().Set("Content-Length", strconv.Itoa(n))
+	}))
+	defer ts.Close()
+	client := &http.Client{}
+	req, _ := http.NewRequest("GET", ts.URL, nil)
+	req.Header.Add("Accept-Encoding", "gzip")
+	req.Header.Add("Connection", "Upgrade")
+	req.Header.Add("Accept", "text/event-stream")
+	res, err := client.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	gz, err := gzip.NewReader(res.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer gz.Close()
+	data, err := io.ReadAll(gz)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(data, []byte(welcome)) {
+		t.Errorf("got %s | expected %s", string(data), welcome)
+	}
+}
+
 func TestCacheFile(t *testing.T) {
 	welcome := "Welcome to the page!"
-	r := &WRoute{mux: http.NewServeMux()}
+	r := &WRoute{Mux: http.NewServeMux()}
 	err := r.CacheFile("/txt/welcome.txt", &mf)
 	if err != nil {
 		t.Fatal(err)
 	}
-	ts := httptest.NewServer(r.mux)
+	ts := httptest.NewServer(r.Mux)
 	defer ts.Close()
 	res, err := http.Get(ts.URL + "/txt/welcome.txt")
 	if err != nil {
@@ -65,12 +107,12 @@ func TestCacheFS(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	r := &WRoute{mux: http.NewServeMux()}
+	r := &WRoute{Mux: http.NewServeMux()}
 	err = r.CacheFS("txt", &mf)
 	if err != nil {
 		t.Fatal(err)
 	}
-	ts := httptest.NewServer(r.mux)
+	ts := httptest.NewServer(r.Mux)
 	defer ts.Close()
 	tests := [][2]string{
 		{"/txt/a.txt", "a"},
