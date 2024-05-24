@@ -76,6 +76,9 @@ func TestCacheFile(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if !strings.EqualFold(res.Header.Get("ETag"), "f615cf810b8c9723d0a836dbd9df8648") {
+		t.Errorf("got %s | expected f615cf810b8c9723d0a836dbd9df8648", res.Header.Get("ETag"))
+	}
 	if !bytes.Equal(data, []byte(welcome)) {
 		t.Errorf("got %s | expected %s", string(data), welcome)
 	}

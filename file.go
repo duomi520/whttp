@@ -9,7 +9,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"strconv"
 	"strings"
 
 	"compress/gzip"
@@ -165,8 +164,8 @@ func (r *WRoute) CacheFile(file string, mf *MemoryFile, group ...func(*HTTPConte
 				return
 			}
 		}
-		c.Writer.WriteHeader(http.StatusOK)
 		c.Writer.Header().Set("ETag", ETag)
+		c.Writer.WriteHeader(http.StatusOK)
 		_, err := mf.WriteTo(key, c.Writer)
 		if err != nil {
 			c.String(http.StatusNotFound, err.Error())
@@ -212,15 +211,14 @@ func (r *WRoute) CacheFileGZIP(level int, file string, mf *MemoryFile, group ...
 				return
 			}
 		}
-		c.Writer.WriteHeader(http.StatusOK)
 		c.Writer.Header().Set("ETag", ETag)
 		c.Writer.Header().Set("Content-Encoding", "gzip")
 		c.Writer.Header().Set("Vary", "Accept-Encoding")
-		n, err := mf.WriteTo(key, c.Writer)
+		c.Writer.WriteHeader(http.StatusOK)
+		_, err := mf.WriteTo(key, c.Writer)
 		if err != nil {
 			c.String(http.StatusNotFound, err.Error())
 		}
-		c.Writer.Header().Set("Content-Length", strconv.Itoa(n))
 	}
 	r.GET(key, append(group, fn)...)
 	return nil
