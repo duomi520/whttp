@@ -19,6 +19,9 @@ var DefaultMarshal func(any) ([]byte, error) = json.Marshal
 // DefaultUnmarshal 缺省JSON解码器
 var DefaultUnmarshal func([]byte, any) error = json.Unmarshal
 
+// globalMiddleware 全局中间件
+var globalMiddleware []func(*HTTPContext)
+
 // HTTPContext 上下文
 type HTTPContext struct {
 	index   int
@@ -108,7 +111,14 @@ func (c *HTTPContext) JSON(status int, v any) {
 // Next 下一个
 func (c *HTTPContext) Next() {
 	c.index++
-	c.chain[c.index](c)
+	if c.index < len(c.chain) {
+		c.chain[c.index](c)
+	}
+}
+
+// File 将静态文件直接返回给客户端
+func (c *HTTPContext) File(filepath string) {
+	http.ServeFile(c.Writer, c.Request, filepath)
 }
 
 // WRoute 路由
@@ -143,6 +153,16 @@ func (r *WRoute) SetDebugMode(b bool) {
 	r.debugMode = b
 }
 
+// Use 全局中间件 需放在最前面
+func (r *WRoute) Use(g ...func(*HTTPContext)) {
+	for _, v := range g {
+		if v == nil {
+			panic("中间件不为nil")
+		}
+	}
+	globalMiddleware = append(globalMiddleware, g...)
+}
+
 // GET g
 func (r *WRoute) GET(pattern string, fn ...func(*HTTPContext)) {
 	r.Mux.HandleFunc(pattern, r.warp(fn, "GET"))
@@ -165,6 +185,14 @@ func (r *WRoute) DELETE(pattern string, fn ...func(*HTTPContext)) {
 
 // warp 封装
 func (r *WRoute) warp(g []func(*HTTPContext), method string) func(http.ResponseWriter, *http.Request) {
+	for _, v := range g {
+		if v == nil {
+			panic("中间件不为nil")
+		}
+	}
+	if globalMiddleware != nil {
+		g = append(globalMiddleware, g...)
+	}
 	return func(rw http.ResponseWriter, req *http.Request) {
 		defer func() {
 			if v := recover(); v != nil {
@@ -172,13 +200,15 @@ func (r *WRoute) warp(g []func(*HTTPContext), method string) func(http.ResponseW
 				lenght := runtime.Stack(buf, false)
 				r.logger.Error(fmt.Sprintf(" %v \n%s", v, buf[:lenght]))
 				if r.debugMode {
-					rw.Write([]byte("\n"))
+					rw.WriteHeader(http.StatusInternalServerError)
 					rw.Write(buf[:lenght])
 				}
 			}
 		}()
 		if !strings.EqualFold(method, req.Method) {
 			r.logger.Error(fmt.Sprintf("not a %s request", req.Method))
+			rw.WriteHeader(http.StatusMethodNotAllowed)
+			io.WriteString(rw, "method not allowed")
 			return
 		}
 		c := HTTPContextPool.Get().(*HTTPContext)

@@ -93,7 +93,9 @@ func TestMiddleware(t *testing.T) {
 	fn := func(c *HTTPContext) {
 		signature += "<->"
 	}
-	r.POST("/", MiddlewareA(), MiddlewareB(), MiddlewareC(), fn)
+	g := []func(*HTTPContext){MiddlewareA(), MiddlewareB(), MiddlewareC()}
+	r.POST("/", append(g, fn)...)
+	//r.POST("/", MiddlewareA(), MiddlewareB(), MiddlewareC(), fn)
 	ts := httptest.NewServer(r.Mux)
 	defer ts.Close()
 	_, err := http.Post(ts.URL, "application/x-www-form-urlencoded",
@@ -122,12 +124,68 @@ func TestMethod(t *testing.T) {
 	r.GET("/", fn)
 	ts := httptest.NewServer(r.Mux)
 	defer ts.Close()
-	_, err := http.Post(ts.URL, "application/x-www-form-urlencoded", strings.NewReader(""))
+	res, err := http.Post(ts.URL, "application/x-www-form-urlencoded", strings.NewReader(""))
 	if err != nil {
 		t.Fatal(err)
+	}
+	data, err := io.ReadAll(res.Body)
+	res.Body.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(data, []byte("method not allowed")) {
+		t.Errorf("got %s | expected method not allowed", string(data))
 	}
 }
 
 /*
 time="2024-05-01 00:15:08" level=ERROR msg="not a POST request"
 */
+
+func TestFile(t *testing.T) {
+	r := &WRoute{Mux: http.NewServeMux()}
+	fn := func(c *HTTPContext) {
+		c.File("txt/a.txt")
+	}
+	r.GET("/", fn)
+	ts := httptest.NewServer(r.Mux)
+	defer ts.Close()
+	res, err := http.Get(ts.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	data, err := io.ReadAll(res.Body)
+	res.Body.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(data, []byte("a")) {
+		t.Errorf("got %s | expected a", string(data))
+	}
+}
+
+func TestUse(t *testing.T) {
+	slog.SetLogLoggerLevel(slog.LevelDebug)
+	r := &WRoute{Mux: http.NewServeMux()}
+	r.Use(LoggerMiddleware())
+	fn := func(c *HTTPContext) {
+		c.String(200, "Hi")
+	}
+	r.GET("/", fn)
+	ts := httptest.NewServer(r.Mux)
+	defer ts.Close()
+	res, err := http.Get(ts.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	data, err := io.ReadAll(res.Body)
+	res.Body.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(data, []byte("Hi")) {
+		t.Errorf("got %s | expected Hi", string(data))
+	}
+}
+
+// 2024/05/23 19:44:19 DEBUG |       514.2µs | 127.0.0.1:51959 |   200 |     GET | / | 2
