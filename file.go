@@ -15,8 +15,6 @@ import (
 	"compress/gzip"
 	"io"
 	"sync"
-
-	"github.com/duomi520/utils"
 	"time"
 )
 
@@ -163,14 +161,15 @@ func (r *WRoute) CacheFile(file string, mf *MemoryFile, group ...func(*HTTPConte
 		ETag := mf.GetETag(key)
 		if !checkCacheControl(c.Request) {
 			if strings.Contains(c.Request.Header.Get("If-None-Match"), ETag) {
-				c.String(utils.StatusNotModified, "")
+				c.String(http.StatusNotModified, "")
 				return
 			}
 		}
+		c.Writer.WriteHeader(http.StatusOK)
 		c.Writer.Header().Set("ETag", ETag)
 		_, err := mf.WriteTo(key, c.Writer)
 		if err != nil {
-			c.String(utils.StatusNotFound, err.Error())
+			c.String(http.StatusNotFound, err.Error())
 		}
 	}
 	r.GET(key, append(group, fn)...)
@@ -189,8 +188,8 @@ func (r *WRoute) CacheFileGZIP(level int, file string, mf *MemoryFile, group ...
 		if err != nil {
 			return nil, fmt.Errorf("GZIP压缩缓存文件(step1)失败: %w", err)
 		}
-		var buf *bytes.Buffer
-		gz, err := gzip.NewWriterLevel(buf, level)
+		var buf bytes.Buffer
+		gz, err := gzip.NewWriterLevel(&buf, level)
 		if err != nil {
 			return nil, fmt.Errorf("GZIP压缩缓存文件(step2)失败: %w", err)
 		}
@@ -209,16 +208,17 @@ func (r *WRoute) CacheFileGZIP(level int, file string, mf *MemoryFile, group ...
 		ETag := mf.GetETag(key)
 		if !checkCacheControl(c.Request) {
 			if strings.Contains(c.Request.Header.Get("If-None-Match"), ETag) {
-				c.String(utils.StatusNotModified, "")
+				c.String(http.StatusNotModified, "")
 				return
 			}
 		}
+		c.Writer.WriteHeader(http.StatusOK)
 		c.Writer.Header().Set("ETag", ETag)
 		c.Writer.Header().Set("Content-Encoding", "gzip")
 		c.Writer.Header().Set("Vary", "Accept-Encoding")
 		n, err := mf.WriteTo(key, c.Writer)
 		if err != nil {
-			c.String(utils.StatusNotFound, err.Error())
+			c.String(http.StatusNotFound, err.Error())
 		}
 		c.Writer.Header().Set("Content-Length", strconv.Itoa(n))
 	}
