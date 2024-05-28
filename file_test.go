@@ -2,6 +2,8 @@ package whttp
 
 import (
 	"bytes"
+	"compress/flate"
+	"compress/gzip"
 	"fmt"
 	"io"
 	"net/http"
@@ -9,8 +11,6 @@ import (
 	"strings"
 	"testing"
 )
-
-var mf MemoryFile
 
 func TestStatic(t *testing.T) {
 	r := &WRoute{Mux: http.NewServeMux()}
@@ -22,7 +22,7 @@ func TestStatic(t *testing.T) {
 		t.Fatal(err)
 	}
 	data, err := io.ReadAll(res.Body)
-	res.Body.Close()
+	defer res.Body.Close()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -59,6 +59,7 @@ func TestStaticFS(t *testing.T) {
 }
 
 func TestCacheFile(t *testing.T) {
+	var mf MemoryFile
 	welcome := "Welcome to the page!"
 	r := &WRoute{Mux: http.NewServeMux()}
 	err := r.CacheFile("txt\\welcome.txt", &mf)
@@ -71,13 +72,13 @@ func TestCacheFile(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	data, err := io.ReadAll(res.Body)
-	res.Body.Close()
-	if err != nil {
-		t.Fatal(err)
-	}
 	if !strings.EqualFold(res.Header.Get("ETag"), "f615cf810b8c9723d0a836dbd9df8648") {
 		t.Errorf("got %s | expected f615cf810b8c9723d0a836dbd9df8648", res.Header.Get("ETag"))
+	}
+	data, err := io.ReadAll(res.Body)
+	defer res.Body.Close()
+	if err != nil {
+		t.Fatal(err)
 	}
 	if !bytes.Equal(data, []byte(welcome)) {
 		t.Errorf("got %s | expected %s", string(data), welcome)
@@ -85,6 +86,7 @@ func TestCacheFile(t *testing.T) {
 }
 
 func TestCacheFS(t *testing.T) {
+	var mf MemoryFile
 	r := &WRoute{Mux: http.NewServeMux()}
 	err := r.CacheFS("txt", &mf)
 	if err != nil {
@@ -125,3 +127,45 @@ func TestCacheFS(t *testing.T) {
 }
 
 // 404 page not found
+
+func TestCacheFSGZIP(t *testing.T) {
+	var mf MemoryFile
+	welcome := "Welcome to the page!"
+	r := &WRoute{Mux: http.NewServeMux()}
+	err := r.CacheFileGZIP(flate.DefaultCompression, "txt\\welcome.txt", &mf)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ts := httptest.NewServer(r.Mux)
+	defer ts.Close()
+	client := &http.Client{}
+	req, _ := http.NewRequest("GET", ts.URL+"/txt/welcome.txt", nil)
+	req.Header.Add("Accept-Encoding", "gzip")
+	res, err := client.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.EqualFold(res.Header.Get("ETag"), "f7b3b7e0f288ecbc7d805c12d782cb88") {
+		t.Errorf("got %s | expected f7b3b7e0f288ecbc7d805c12d782cb88", res.Header.Get("ETag"))
+	}
+	if !strings.EqualFold(res.Header.Get("Content-Encoding"), "gzip") {
+		t.Errorf("got %s | expected gzip", res.Header.Get("Content-Encoding"))
+	}
+	if !strings.EqualFold(res.Header.Get("Vary"), "Accept-Encoding") {
+		t.Errorf("got %s | expected Accept-Encoding", res.Header.Get("Vary"))
+	}
+	gr, err := gzip.NewReader(res.Body)
+	defer res.Body.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer gr.Close()
+	unzipped := make([]byte, 64)
+	n, err := gr.Read(unzipped)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(unzipped[:n], []byte(welcome)) {
+		t.Errorf("got %s | expected %s", string(unzipped[:n]), welcome)
+	}
+}

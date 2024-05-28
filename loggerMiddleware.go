@@ -25,12 +25,12 @@ func LoggerMiddleware() func(*HTTPContext) {
 		}
 		if rw.status > 299 {
 			if rw.err != nil {
-				slog.Error(fmt.Sprintf(formatLogger, latency, c.Request.RemoteAddr, rw.status, c.Request.Method, c.Request.URL, rw.err.Error()))
+				slog.Error(fmt.Sprintf(formatLogger, latency, ClientIP(c.Request), rw.status, c.Request.Method, c.Request.URL, rw.err.Error()))
 			} else {
-				slog.Warn(fmt.Sprintf(formatLogger, latency, c.Request.RemoteAddr, rw.status, c.Request.Method, c.Request.URL, strconv.Itoa(rw.length)))
+				slog.Warn(fmt.Sprintf(formatLogger, latency, ClientIP(c.Request), rw.status, c.Request.Method, c.Request.URL, strconv.Itoa(rw.length)))
 			}
 		} else {
-			slog.Debug(fmt.Sprintf(formatLogger, latency, c.Request.RemoteAddr, rw.status, c.Request.Method, c.Request.URL, strconv.Itoa(rw.length)))
+			slog.Debug(fmt.Sprintf(formatLogger, latency, ClientIP(c.Request), rw.status, c.Request.Method, c.Request.URL, strconv.Itoa(rw.length)))
 		}
 	}
 }

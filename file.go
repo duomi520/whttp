@@ -158,7 +158,7 @@ func (r *WRoute) CacheFile(file string, mf *MemoryFile, group ...func(*HTTPConte
 	}
 	fn := func(c *HTTPContext) {
 		ETag := mf.GetETag(key)
-		if !checkCacheControl(c.Request) {
+		if checkCacheControl(c.Request) {
 			if strings.Contains(c.Request.Header.Get("If-None-Match"), ETag) {
 				c.String(http.StatusNotModified, "")
 				return
@@ -197,7 +197,11 @@ func (r *WRoute) CacheFileGZIP(level int, file string, mf *MemoryFile, group ...
 		if err != nil {
 			return nil, fmt.Errorf("GZIP压缩缓存文件(step3)失败: %w", err)
 		}
-		return data, nil
+		err = gz.Flush()
+		if err != nil {
+			return nil, fmt.Errorf("GZIP压缩缓存文件(step4)失败: %w", err)
+		}
+		return buf.Bytes(), nil
 	}
 	key := "/" + filepath.ToSlash(file)
 	if err := mf.StoreCacheFile(key, load); err != nil {
@@ -205,11 +209,15 @@ func (r *WRoute) CacheFileGZIP(level int, file string, mf *MemoryFile, group ...
 	}
 	fn := func(c *HTTPContext) {
 		ETag := mf.GetETag(key)
-		if !checkCacheControl(c.Request) {
+		if checkCacheControl(c.Request) {
 			if strings.Contains(c.Request.Header.Get("If-None-Match"), ETag) {
 				c.String(http.StatusNotModified, "")
 				return
 			}
+		}
+		if !strings.Contains(c.Request.Header.Get("Accept-Encoding"), "gzip") {
+			c.String(http.StatusNotAcceptable, "need gzip")
+			return
 		}
 		c.Writer.Header().Set("ETag", ETag)
 		c.Writer.Header().Set("Content-Encoding", "gzip")
