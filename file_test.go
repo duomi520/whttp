@@ -5,6 +5,7 @@ import (
 	"compress/flate"
 	"compress/gzip"
 	"fmt"
+	"html/template"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -167,5 +168,43 @@ func TestCacheFSGZIP(t *testing.T) {
 	}
 	if !bytes.Equal(unzipped[:n], []byte(welcome)) {
 		t.Errorf("got %s | expected %s", string(unzipped[:n]), welcome)
+	}
+}
+
+func TestStoreTemplate(t *testing.T) {
+	var mf MemoryFile
+	welcome := "Welcome to the home page!"
+	load := func() ([]byte, error) {
+		tl, err := template.ParseFiles("file.tmpl")
+		if err != nil {
+			return nil, fmt.Errorf("缓存模板(step1)失败: %w", err)
+		}
+		buf := bytes.NewBuffer(make([]byte, 0, 64))
+		err = tl.Execute(buf, welcome)
+		if err != nil {
+			return nil, fmt.Errorf("缓存模板(step2)失败: %w", err)
+		}
+		return buf.Bytes(), nil
+	}
+	mf.StoreFileBuffer("a", load)
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		var err error
+		_, err = mf.WriteTo("a", w)
+		if err != nil {
+			t.Fatal("err: ", err.Error())
+		}
+	}))
+	defer ts.Close()
+	res, err := http.Get(ts.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	data, err := io.ReadAll(res.Body)
+	defer res.Body.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(data, []byte(welcome)) {
+		t.Errorf("got %s | expected %s", string(data), welcome)
 	}
 }

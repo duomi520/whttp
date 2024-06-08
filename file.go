@@ -66,17 +66,17 @@ func (mf *MemoryFile) WriteTo(key string, w io.Writer) (int, error) {
 	}
 	f := v.(FileBuffer)
 	if f.Buf == nil {
-		var err error
-		f, err = NewFileBuffer(f.Load)
+		data, err := f.Load()
 		if err != nil {
 			return 0, err
 		}
+		return w.Write(data)
 	}
 	return w.Write(f.Buf.Bytes())
 }
 
-// StoreCacheFile 存储缓存
-func (mf *MemoryFile) StoreCacheFile(key string, load func() ([]byte, error)) error {
+// StoreFileBuffer 存储缓存
+func (mf *MemoryFile) StoreFileBuffer(key string, load func() ([]byte, error)) error {
 	fb, err := NewFileBuffer(load)
 	if err != nil {
 		return err
@@ -85,16 +85,30 @@ func (mf *MemoryFile) StoreCacheFile(key string, load func() ([]byte, error)) er
 	return nil
 }
 
-// FreeBuffer 释放缓存
-func (mf *MemoryFile) FreeBuffer(key string) {
+// ReloadBuffer 重新载入缓存
+func (mf *MemoryFile) ReloadFileBuffer(key string) error {
+	v, ok := mf.Load(key)
+	if !ok {
+		return errors.New("no found")
+	}
+	fb, err := NewFileBuffer(v.(FileBuffer).Load)
+	if err != nil {
+		return err
+	}
+	mf.Store(key, fb)
+	return nil
+}
+
+// FreeFileBuffer 释放缓存
+func (mf *MemoryFile) FreeFileBuffer(key string) {
 	v, _ := mf.Load(key)
 	f := v.(FileBuffer)
 	nf := FileBuffer{Load: f.Load}
 	mf.Store(key, nf)
 }
 
-// DeleteCacheFile 删除缓存
-func (mf *MemoryFile) DeleteCacheFile(key string) {
+// DeleteFileBuffer 删除缓存
+func (mf *MemoryFile) DeleteFileBuffer(key string) {
 	mf.Delete(key)
 }
 
@@ -153,7 +167,7 @@ func (r *WRoute) CacheFile(file string, mf *MemoryFile, group ...func(*HTTPConte
 		return os.ReadFile(file)
 	}
 	key := "/" + filepath.ToSlash(file)
-	if err := mf.StoreCacheFile(key, load); err != nil {
+	if err := mf.StoreFileBuffer(key, load); err != nil {
 		return err
 	}
 	fn := func(c *HTTPContext) {
@@ -204,7 +218,7 @@ func (r *WRoute) CacheFileGZIP(level int, file string, mf *MemoryFile, group ...
 		return buf.Bytes(), nil
 	}
 	key := "/" + filepath.ToSlash(file)
-	if err := mf.StoreCacheFile(key, load); err != nil {
+	if err := mf.StoreFileBuffer(key, load); err != nil {
 		return err
 	}
 	fn := func(c *HTTPContext) {

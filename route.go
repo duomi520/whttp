@@ -3,12 +3,13 @@ package whttp
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/duomi520/utils"
 	"io"
 	"log/slog"
 	"net/http"
 	"runtime"
 	"strings"
+
+	"github.com/duomi520/utils"
 )
 
 // DefaultMarshal 缺省JSON编码器
@@ -20,6 +21,11 @@ var DefaultUnmarshal func([]byte, any) error = json.Unmarshal
 // globalMiddleware 全局中间件
 var globalMiddleware []func(*HTTPContext)
 
+// Renderer 模板渲染接口
+type Renderer interface {
+	ExecuteTemplate(io.Writer, string, any) error
+}
+
 // WRoute 路由
 type WRoute struct {
 	debugMode bool
@@ -27,6 +33,8 @@ type WRoute struct {
 	//validator
 	validatorVar    func(any, string) error
 	validatorStruct func(any) error
+	//模版
+	renderer Renderer
 	//logger
 	logger *slog.Logger
 }
@@ -50,6 +58,10 @@ func NewRoute(v utils.IValidator, l *slog.Logger) *WRoute {
 
 func (r *WRoute) SetDebugMode(b bool) {
 	r.debugMode = b
+}
+
+func (r *WRoute) SetRenderer(s Renderer) {
+	r.renderer = s
 }
 
 // Use 全局中间件 需放在最前面

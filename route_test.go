@@ -2,6 +2,7 @@ package whttp
 
 import (
 	"bytes"
+	"html/template"
 	"io"
 	"log/slog"
 	"net/http"
@@ -161,6 +162,33 @@ func TestFile(t *testing.T) {
 	}
 	if !bytes.Equal(data, []byte("a")) {
 		t.Errorf("got %s | expected a", string(data))
+	}
+}
+
+func TestRender(t *testing.T) {
+	tl, err := template.ParseFiles("file.tmpl")
+	if err != nil {
+		t.Fatal(err)
+	}
+	r := &WRoute{Mux: http.NewServeMux()}
+	r.SetRenderer(tl)
+	fn := func(c *HTTPContext) {
+		c.Render(http.StatusOK, "file.tmpl", "6月7日")
+	}
+	r.GET("/", fn)
+	ts := httptest.NewServer(r.Mux)
+	defer ts.Close()
+	res, err := http.Get(ts.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	data, err := io.ReadAll(res.Body)
+	res.Body.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(data, []byte("6月7日")) {
+		t.Errorf("got %s | expected 6月7日", string(data))
 	}
 }
 
