@@ -3,5 +3,8 @@
 -调用链(Tracing)中间件
 -Prometheus 监控中间件
 
--3 个 Go 安全库
-<https://zhuanlan.zhihu.com/p/695204319>
+-CORS 跨域
+<https://zhuanlan.zhihu.com/p/118381660>
+
+-安全细节
+<https://www.cnblogs.com/teufel/p/10760635.html>

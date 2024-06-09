@@ -208,3 +208,66 @@ func TestStoreTemplate(t *testing.T) {
 		t.Errorf("got %s | expected %s", string(data), welcome)
 	}
 }
+func TestStoreTemplateGZIP(t *testing.T) {
+	var mf MemoryFile
+	welcome := "Welcome to the home page!"
+	load := func() ([]byte, error) {
+		t, err := template.ParseFiles("file.tmpl")
+		if err != nil {
+			return nil, fmt.Errorf("缓存GZIP压缩模板(step1)失败: %w", err)
+		}
+		var buf1, buf2 bytes.Buffer
+		err = t.Execute(&buf1, welcome)
+		if err != nil {
+			return nil, fmt.Errorf("缓存GZIP压缩模板(step2)失败: %w", err)
+		}
+		gz, err := gzip.NewWriterLevel(&buf2, gzip.DefaultCompression)
+		if err != nil {
+			return nil, fmt.Errorf("缓存GZIP压缩模板(step3)失败: %w", err)
+		}
+		defer gz.Close()
+		_, err = gz.Write(buf1.Bytes())
+		if err != nil {
+			return nil, fmt.Errorf("缓存GZIP压缩模板(step4)失败: %w", err)
+		}
+		err = gz.Flush()
+		if err != nil {
+			return nil, fmt.Errorf("缓存GZIP压缩模板(step5)失败: %w", err)
+		}
+		return buf2.Bytes(), nil
+	}
+	mf.StoreFileBuffer("a", load)
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		if !strings.Contains(req.Header.Get("Accept-Encoding"), "gzip") {
+			t.Fatal("非gzip请求")
+		}
+		w.Header().Set("Content-Encoding", "gzip")
+		w.Header().Set("Vary", "Accept-Encoding")
+		_, err := mf.WriteTo("a", w)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}))
+	defer ts.Close()
+	client := &http.Client{}
+	req, _ := http.NewRequest("GET", ts.URL, nil)
+	req.Header.Add("Accept-Encoding", "gzip")
+	res, err := client.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	gz, err := gzip.NewReader(res.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer gz.Close()
+	unzipped := make([]byte, 64)
+	n, err := gz.Read(unzipped)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(unzipped[:n], []byte(welcome)) {
+		t.Errorf("got %s | expected %s", string(unzipped[:n]), welcome)
+	}
+}

@@ -8,10 +8,10 @@ import (
 	"testing"
 )
 
-func TestClickjackingMiddleware(t *testing.T) {
+func TestClickjacking(t *testing.T) {
 	slog.SetLogLoggerLevel(slog.LevelDebug)
 	r := &WRoute{Mux: http.NewServeMux()}
-	r.Use(ClickjackingMiddleware())
+	r.Use(HeaderMiddleware(map[string]string{"frame-ancestors": "none", "X-Frame-Optoins": "DENY"}))
 	fn := func(c *HTTPContext) {
 		c.String(200, "Hi")
 	}
