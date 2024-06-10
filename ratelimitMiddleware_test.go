@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/duomi520/utils"
+	"github.com/go-playground/validator"
 )
 
 func TestLimitMiddleware(t *testing.T) {
@@ -20,7 +21,8 @@ func TestLimitMiddleware(t *testing.T) {
 	fn := func(c *HTTPContext) {
 		c.String(200, "Hi")
 	}
-	r := &WRoute{Mux: http.NewServeMux()}
+	r := NewRoute(validator.New(), nil)
+	r.Mux = http.NewServeMux()
 	r.GET("/", LimitMiddleware(limiter), fn)
 	ts := httptest.NewServer(r.Mux)
 	defer ts.Close()

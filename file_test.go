@@ -11,10 +11,13 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/go-playground/validator"
 )
 
 func TestStatic(t *testing.T) {
-	r := &WRoute{Mux: http.NewServeMux()}
+	r := NewRoute(validator.New(), nil)
+	r.Mux = http.NewServeMux()
 	r.Static("/", "txt\\welcome.txt")
 	ts := httptest.NewServer(r.Mux)
 	defer ts.Close()
@@ -32,7 +35,8 @@ func TestStatic(t *testing.T) {
 	}
 }
 func TestStaticFS(t *testing.T) {
-	r := &WRoute{Mux: http.NewServeMux()}
+	r := NewRoute(validator.New(), nil)
+	r.Mux = http.NewServeMux()
 	r.StaticFS("txt")
 	ts := httptest.NewServer(r.Mux)
 	defer ts.Close()
@@ -62,7 +66,8 @@ func TestStaticFS(t *testing.T) {
 func TestCacheFile(t *testing.T) {
 	var mf MemoryFile
 	welcome := "Welcome to the page!"
-	r := &WRoute{Mux: http.NewServeMux()}
+	r := NewRoute(validator.New(), nil)
+	r.Mux = http.NewServeMux()
 	err := r.CacheFile("txt\\welcome.txt", &mf)
 	if err != nil {
 		t.Fatal(err)
@@ -88,7 +93,8 @@ func TestCacheFile(t *testing.T) {
 
 func TestCacheFS(t *testing.T) {
 	var mf MemoryFile
-	r := &WRoute{Mux: http.NewServeMux()}
+	r := NewRoute(validator.New(), nil)
+	r.Mux = http.NewServeMux()
 	err := r.CacheFS("txt", &mf)
 	if err != nil {
 		t.Fatal(err)
@@ -132,7 +138,8 @@ func TestCacheFS(t *testing.T) {
 func TestCacheFSGZIP(t *testing.T) {
 	var mf MemoryFile
 	welcome := "Welcome to the page!"
-	r := &WRoute{Mux: http.NewServeMux()}
+	r := NewRoute(validator.New(), nil)
+	r.Mux = http.NewServeMux()
 	err := r.CacheFileGZIP(flate.DefaultCompression, "txt\\welcome.txt", &mf)
 	if err != nil {
 		t.Fatal(err)

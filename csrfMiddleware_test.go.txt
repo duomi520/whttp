@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/go-playground/validator"
 	"github.com/gorilla/csrf"
 )
 
@@ -27,7 +28,8 @@ func postCSRF(c *HTTPContext) {
 }
 
 func TestCSRFMiddleware(t *testing.T) {
-	r := &WRoute{Mux: http.NewServeMux()}
+	r := NewRoute(validator.New(), nil)
+	r.Mux = http.NewServeMux()
 	csrfMiddleware := csrf.Protect([]byte("32-byte-long-auth-key"))
 	r.GET("/a", getCSRF)
 	r.POST("/c", postCSRF)

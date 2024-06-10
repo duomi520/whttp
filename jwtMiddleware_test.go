@@ -8,12 +8,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-playground/validator"
 	"github.com/golang-jwt/jwt/v4"
 )
 
 func TestJWTMiddleware(t *testing.T) {
 	j := JWT{TokenSigningKey: []byte("TokenSigningKey"), TokenExpires: time.Duration(time.Second)}
-	r := &WRoute{Mux: http.NewServeMux()}
+	r := NewRoute(validator.New(), nil)
+	r.Mux = http.NewServeMux()
 	fn := func(c *HTTPContext) {
 		claims, ok := c.Get("claims")
 		if !ok {

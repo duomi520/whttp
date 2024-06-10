@@ -78,18 +78,11 @@ func (c *HTTPContext) BindJSON(v any) error {
 	return nil
 }
 
-// HookIOWriteError String、JSON、Render IO Write时错误的处理函数
-var HookIOWriteError = func(c *HTTPContext, n int, err error) {
-	if err != nil {
-		c.Error(err.Error())
-	}
-}
-
 // String 带有状态码的纯文本响应
 func (c *HTTPContext) String(status int, msg string) {
 	c.Writer.WriteHeader(status)
 	n, err := io.WriteString(c.Writer, msg)
-	HookIOWriteError(c, n, err)
+	c.route.HookIOWriteError(c, n, err)
 }
 
 // JSON 带有状态码的JSON 数据
@@ -102,7 +95,7 @@ func (c *HTTPContext) JSON(status int, v any) {
 	c.Writer.Header().Set("Content-Type", "application/json")
 	c.Writer.WriteHeader(status)
 	n, err := c.Writer.Write(d)
-	HookIOWriteError(c, n, err)
+	c.route.HookIOWriteError(c, n, err)
 }
 
 // Render 渲染模板
@@ -110,7 +103,7 @@ func (c *HTTPContext) Render(status int, name string, v any) {
 	if c.route.renderer != nil {
 		err := c.route.renderer.ExecuteTemplate(c.Writer, name, v)
 		if err != nil {
-			HookIOWriteError(c, 0, err)
+			c.route.HookIOWriteError(c, 0, err)
 		}
 	}
 }

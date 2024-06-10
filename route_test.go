@@ -11,10 +11,13 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/go-playground/validator"
 )
 
 func TestFormValue(t *testing.T) {
-	r := &WRoute{Mux: http.NewServeMux()}
+	r := NewRoute(validator.New(), nil)
+	r.Mux = http.NewServeMux()
 	fn := func(c *HTTPContext) {
 		if (strings.Compare(c.Request.FormValue("name"), "linda") == 0) && (strings.Compare(c.Request.FormValue("mobile"), "xxxxxxxx") == 0) {
 			c.String(http.StatusOK, "OK")
@@ -41,7 +44,8 @@ func TestFormValue(t *testing.T) {
 
 }
 func TestParams(t *testing.T) {
-	r := &WRoute{Mux: http.NewServeMux()}
+	r := NewRoute(validator.New(), nil)
+	r.Mux = http.NewServeMux()
 	fn := func(c *HTTPContext) {
 		if (strings.Compare(c.Request.PathValue("name"), "linda") == 0) && (strings.Compare(c.Request.PathValue("mobile"), "xxxxxxxx") == 0) {
 			c.String(http.StatusOK, "OK")
@@ -69,7 +73,8 @@ func TestParams(t *testing.T) {
 
 func TestMiddleware(t *testing.T) {
 	signature := ""
-	r := &WRoute{Mux: http.NewServeMux()}
+	r := NewRoute(validator.New(), nil)
+	r.Mux = http.NewServeMux()
 	MiddlewareA := func() func(*HTTPContext) {
 		return func(c *HTTPContext) {
 			signature += "A1"
@@ -110,7 +115,8 @@ func TestMiddleware(t *testing.T) {
 }
 
 func TestMethod(t *testing.T) {
-	r := &WRoute{Mux: http.NewServeMux()}
+	r := NewRoute(validator.New(), nil)
+	r.Mux = http.NewServeMux()
 	r.logger = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
 		ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
 			if a.Key == slog.TimeKey {
@@ -144,7 +150,8 @@ time="2024-05-01 00:15:08" level=ERROR msg="not a POST request"
 */
 
 func TestFile(t *testing.T) {
-	r := &WRoute{Mux: http.NewServeMux()}
+	r := NewRoute(validator.New(), nil)
+	r.Mux = http.NewServeMux()
 	fn := func(c *HTTPContext) {
 		c.File("txt/a.txt")
 	}
@@ -170,7 +177,8 @@ func TestRender(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	r := &WRoute{Mux: http.NewServeMux()}
+	r := NewRoute(validator.New(), nil)
+	r.Mux = http.NewServeMux()
 	r.SetRenderer(tl)
 	fn := func(c *HTTPContext) {
 		c.Render(http.StatusOK, "file.tmpl", "6月7日")
@@ -194,7 +202,8 @@ func TestRender(t *testing.T) {
 
 func TestUse(t *testing.T) {
 	slog.SetLogLoggerLevel(slog.LevelDebug)
-	r := &WRoute{Mux: http.NewServeMux()}
+	r := NewRoute(validator.New(), nil)
+	r.Mux = http.NewServeMux()
 	r.Use(LoggerMiddleware())
 	fn := func(c *HTTPContext) {
 		c.String(200, "Hi")

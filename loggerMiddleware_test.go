@@ -6,12 +6,15 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/go-playground/validator"
 )
 
 func TestLoggerMiddleware(t *testing.T) {
 	slog.SetLogLoggerLevel(slog.LevelDebug)
 	fn := func(c *HTTPContext) {}
-	r := &WRoute{Mux: http.NewServeMux()}
+	r := NewRoute(validator.New(), nil)
+	r.Mux = http.NewServeMux()
 	r.POST("/p", LoggerMiddleware(), fn)
 	r.GET("/g", LoggerMiddleware(), fn)
 	ts := httptest.NewServer(r.Mux)

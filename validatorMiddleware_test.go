@@ -11,13 +11,13 @@ import (
 )
 
 func TestValidatorMiddleware(t *testing.T) {
-	v := validator.New()
 	fn := func(c *HTTPContext) {
 		if !strings.EqualFold(c.Request.PathValue("number"), "777") {
 			t.Fatal(c.Request.PathValue("number"))
 		}
 	}
-	r := &WRoute{Mux: http.NewServeMux(), validatorVar: v.Var, validatorStruct: v.Struct}
+	r := NewRoute(validator.New(), nil)
+	r.Mux = http.NewServeMux()
 	r.POST("/number/{number}", ValidatorMiddleware("number:numeric"), fn)
 	ts := httptest.NewServer(r.Mux)
 	defer ts.Close()

@@ -35,6 +35,8 @@ type WRoute struct {
 	validatorStruct func(any) error
 	//模版
 	renderer Renderer
+	//HTTPContext String、JSON、Render IO Write时错误的处理函数
+	HookIOWriteError func(*HTTPContext, int, error)
 	//logger
 	logger *slog.Logger
 }
@@ -48,6 +50,12 @@ func NewRoute(v utils.IValidator, l *slog.Logger) *WRoute {
 	}
 	r.validatorVar = v.Var
 	r.validatorStruct = v.Struct
+	r.HookIOWriteError = func(c *HTTPContext, n int, err error) {
+		if err != nil {
+			pc, _, l, _ := runtime.Caller(2)
+			c.Error(fmt.Sprintf("%s[%d]:%s", runtime.FuncForPC(pc).Name(), l, err.Error()))
+		}
+	}
 	if l == nil {
 		r.logger = slog.Default()
 	} else {
