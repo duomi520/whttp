@@ -5,6 +5,8 @@ import (
 	"io"
 	"net/http"
 	"sync"
+
+	"github.com/duomi520/utils"
 )
 
 // H map[string]any 缩写
@@ -15,7 +17,7 @@ type HTTPContext struct {
 	index   int
 	chain   []func(*HTTPContext)
 	mu      sync.RWMutex
-	keys    map[string]any
+	keys    utils.MetaDict[any]
 	Writer  http.ResponseWriter
 	Request *http.Request
 	route   *WRoute
@@ -43,22 +45,22 @@ func (c *HTTPContext) Error(msg string, args ...any) {
 // Set 上下文key-value值
 func (c *HTTPContext) Set(k string, v any) {
 	c.mu.Lock()
-	if c.keys == nil {
-		c.keys = make(map[string]any)
-	}
-	c.keys[k] = v
+	c.keys = c.keys.Set(k, v)
 	c.mu.Unlock()
 }
 
 // Get 上下文key-value值
 func (c *HTTPContext) Get(k string) (v any, b bool) {
-	if c.keys == nil {
-		return
-	}
 	c.mu.RLock()
-	v, b = c.keys[k]
+	defer c.mu.RUnlock()
+	return c.keys.Get(k)
+}
+
+// Del 上下文key-value值
+func (c *HTTPContext) Del(k string) {
+	c.mu.RLock()
+	c.keys = c.keys.Del(k)
 	c.mu.RUnlock()
-	return
 }
 
 // BindJSON 绑定JSON数据
