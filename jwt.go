@@ -50,8 +50,10 @@ func (j JWT) CreateToken(key []string, obj []any) (string, error) {
 	return s, nil
 }
 
-// JWTMiddleware 中间件
-func (j JWT) JWTMiddleware() func(*HTTPContext) {
+// JWTMiddleware 中间件 在Header "Authorization" 设置令牌
+// SecretKey SecretObj
+
+func (j JWT) JWTMiddleware(must ...string) func(*HTTPContext) {
 	return func(c *HTTPContext) {
 		tokenString := c.Request.Header.Get("Authorization")
 		if len(tokenString) == 0 {
@@ -63,8 +65,30 @@ func (j JWT) JWTMiddleware() func(*HTTPContext) {
 			c.String(http.StatusUnauthorized, "令牌无效")
 			return
 		}
-		c.Set("claims", claims)
+		for _, v := range must {
+			if a, ok := claims[v]; !ok {
+				c.String(http.StatusUnauthorized, "令牌信息缺失")
+				return
+			} else {
+				c.Set(v, a)
+			}
+		}
 		c.Next()
+		key, ok := c.Get("SecretKey")
+		if !ok {
+			return
+		}
+		obj, ok := c.Get("SecretObj")
+		if !ok {
+			return
+		}
+		s, err := j.CreateToken(key.([]string), obj.([]any))
+		if err != nil {
+			c.route.logger.Error(err.Error())
+			c.String(http.StatusInternalServerError, err.Error())
+			return
+		}
+		c.Writer.Header().Set("Authorization", s)
 	}
 }
 

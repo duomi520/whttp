@@ -20,6 +20,7 @@ type HTTPContext struct {
 	keys    utils.MetaDict[any]
 	Writer  http.ResponseWriter
 	Request *http.Request
+	flush   func() (int, error)
 	route   *WRoute
 }
 
@@ -52,8 +53,9 @@ func (c *HTTPContext) Set(k string, v any) {
 // Get 上下文key-value值
 func (c *HTTPContext) Get(k string) (v any, b bool) {
 	c.mu.RLock()
-	defer c.mu.RUnlock()
-	return c.keys.Get(k)
+	v, b = c.keys.Get(k)
+	c.mu.RUnlock()
+	return
 }
 
 // Del 上下文key-value值
@@ -82,9 +84,10 @@ func (c *HTTPContext) BindJSON(v any) error {
 
 // String 带有状态码的纯文本响应
 func (c *HTTPContext) String(status int, msg string) {
-	c.Writer.WriteHeader(status)
-	n, err := io.WriteString(c.Writer, msg)
-	c.route.HookIOWriteError(c, n, err)
+	c.flush = func() (int, error) {
+		c.Writer.WriteHeader(status)
+		return io.WriteString(c.Writer, msg)
+	}
 }
 
 // JSON 带有状态码的JSON 数据
@@ -95,17 +98,18 @@ func (c *HTTPContext) JSON(status int, v any) {
 		return
 	}
 	c.Writer.Header().Set("Content-Type", "application/json")
-	c.Writer.WriteHeader(status)
-	n, err := c.Writer.Write(d)
-	c.route.HookIOWriteError(c, n, err)
+	c.flush = func() (int, error) {
+		c.Writer.WriteHeader(status)
+		return c.Writer.Write(d)
+	}
 }
 
 // Render 渲染模板
 func (c *HTTPContext) Render(status int, name string, v any) {
 	if c.route.renderer != nil {
-		err := c.route.renderer.ExecuteTemplate(c.Writer, name, v)
-		if err != nil {
-			c.route.HookIOWriteError(c, 0, err)
+		c.flush = func() (int, error) {
+			c.Writer.WriteHeader(status)
+			return 0, c.route.renderer.ExecuteTemplate(c.Writer, name, v)
 		}
 	}
 }
@@ -118,7 +122,10 @@ func (c *HTTPContext) Next() {
 	}
 }
 
-// File 将静态文件直接返回给客户端
+// File 将静态文件返回给客户端
 func (c *HTTPContext) File(filepath string) {
-	http.ServeFile(c.Writer, c.Request, filepath)
+	c.flush = func() (int, error) {
+		http.ServeFile(c.Writer, c.Request, filepath)
+		return 0, nil
+	}
 }

@@ -1,6 +1,7 @@
 package whttp
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -9,7 +10,6 @@ import (
 	"time"
 
 	"github.com/go-playground/validator"
-	"github.com/golang-jwt/jwt/v4"
 )
 
 func TestJWTMiddleware(t *testing.T) {
@@ -17,15 +17,15 @@ func TestJWTMiddleware(t *testing.T) {
 	r := NewRoute(validator.New(), nil)
 	r.Mux = http.NewServeMux()
 	fn := func(c *HTTPContext) {
-		claims, ok := c.Get("claims")
-		if !ok {
-			t.Fatal("claims缺失")
-		}
-		if claims.(jwt.MapClaims)["id"].(float64) != 1920 {
+		id, _ := c.Get("id")
+		if id.(float64) != 1920 {
 			t.Fatal("不等于1920")
 		}
+		c.Set("SecretKey", []string{"id"})
+		c.Set("SecretObj", []any{1920})
+		c.String(http.StatusOK, "Hi")
 	}
-	r.POST("/", j.JWTMiddleware(), fn)
+	r.POST("/", j.JWTMiddleware("id"), fn)
 	ts := httptest.NewServer(r.Mux)
 	defer ts.Close()
 	//不带token
@@ -53,8 +53,21 @@ func TestJWTMiddleware(t *testing.T) {
 		t.Fatal(err)
 	}
 	req.Header.Set("Authorization", token)
-	_, err = (&http.Client{}).Do(req)
+	resp2, err := (&http.Client{}).Do(req)
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer resp2.Body.Close()
+	data2, err := io.ReadAll(resp2.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.EqualFold(string(data2), "Hi") {
+		t.Fatalf("expected %v got %v", "Hi", string(data2))
+	}
+	// 读取所有响应头部
+	header := resp2.Header
+	fmt.Println(header.Get("Authorization"))
 }
+
+// eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3MTkxMjc3NjYsImlhdCI6MTcxOTEyNzc2NSwiaWQiOjE5MjB9.N1XbLFECK9N8ZtdN7QS-I_M5EY8alOOpMpWED0teNMs

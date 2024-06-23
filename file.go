@@ -180,9 +180,8 @@ func (r *WRoute) CacheFile(file string, mf *MemoryFile, group ...func(*HTTPConte
 		}
 		c.Writer.Header().Set("ETag", ETag)
 		c.Writer.WriteHeader(http.StatusOK)
-		_, err := mf.WriteTo(key, c.Writer)
-		if err != nil {
-			c.String(http.StatusNotFound, err.Error())
+		c.flush = func() (int, error) {
+			return mf.WriteTo(key, c.Writer)
 		}
 	}
 	r.GET(key, append(group, fn)...)
@@ -237,9 +236,8 @@ func (r *WRoute) CacheFileGZIP(level int, file string, mf *MemoryFile, group ...
 		c.Writer.Header().Set("Content-Encoding", "gzip")
 		c.Writer.Header().Set("Vary", "Accept-Encoding")
 		c.Writer.WriteHeader(http.StatusOK)
-		_, err := mf.WriteTo(key, c.Writer)
-		if err != nil {
-			c.String(http.StatusNotFound, err.Error())
+		c.flush = func() (int, error) {
+			return mf.WriteTo(key, c.Writer)
 		}
 	}
 	r.GET(key, append(group, fn)...)
