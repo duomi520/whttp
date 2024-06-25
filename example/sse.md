@@ -19,7 +19,7 @@ ReadTimeout: 3600 _ time.Second,
 WriteTimeout: 3600 _ time.Second,
 MaxHeaderBytes: 1 << 20,
 }
-route.GET("/SSEvent", func(c \*whttp.HTTPContext) {
+route.GET("/SSEvent", func(c *whttp.HTTPContext) {
 c.Writer.Header().Set("Content-Type", "text/event-stream")
 c.Writer.Header().Set("Cache-Control", "no-cache")
 c.Writer.Header().Set("Connection", "keep-alive")

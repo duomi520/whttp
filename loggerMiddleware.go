@@ -19,7 +19,7 @@ func LoggerMiddleware() func(*HTTPContext) {
 		h.w = c.Writer
 		c.Writer = &h
 		c.Next()
-		if c.flush == nil {
+		if c.Flush == nil {
 			h.log(0, nil)
 		}
 	}

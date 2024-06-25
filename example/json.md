@@ -21,7 +21,7 @@ ReadTimeout: 3600 _ time.Second,
 WriteTimeout: 3600 _ time.Second,
 MaxHeaderBytes: 1 << 20,
 }
-route.GET("/", func(c \*whttp.HTTPContext) {
+route.GET("/", func(c *whttp.HTTPContext) {
 c.JSON(http.StatusOK, whttp.H{"id": 1, "name": "wang"})
 })
 if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {

@@ -133,13 +133,18 @@ func (r *WRoute) warp(g []func(*HTTPContext), method string) func(http.ResponseW
 		c := HTTPContextPool.Get().(*HTTPContext)
 		c.index = 0
 		c.chain = g
+		if c.keys.Len() > 0 {
+			c.keys.Key = c.keys.Key[:0]
+			c.keys.Value = c.keys.Value[:0]
+		}
 		c.Writer = rw
 		c.Request = req
+		c.Flush = nil
 		c.route = r
 		c.chain[0](c)
 		//数据写入下层
-		if c.flush != nil {
-			n, err := c.flush()
+		if c.Flush != nil {
+			n, err := c.Flush()
 			r.HookIOWriteError(c, n, err)
 		}
 		HTTPContextPool.Put(c)

@@ -11,7 +11,7 @@ import (
 "github.com/gorilla/csrf"
 )
 
-func getCSRF(c \*whttp.HTTPContext) {
+func getCSRF(c *whttp.HTTPContext) {
 // 获取 token 值
 token := csrf.Token(c.Request)
 // 将 token 写入到 header 中
@@ -33,8 +33,8 @@ route.POST("/p", postCSRF)
 srv := &http.Server{
 //csrfMiddleware 默认只对 POST 验证
 Handler: csrfMiddleware(route.Mux),
-ReadTimeout: 3600 _ time.Second,
-WriteTimeout: 3600 \* time.Second,
+ReadTimeout: 3600 * time.Second,
+WriteTimeout: 3600 * time.Second,
 MaxHeaderBytes: 1 << 20,
 }
 if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {

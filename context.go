@@ -20,7 +20,7 @@ type HTTPContext struct {
 	keys    utils.MetaDict[any]
 	Writer  http.ResponseWriter
 	Request *http.Request
-	flush   func() (int, error)
+	Flush   func() (int, error)
 	route   *WRoute
 }
 
@@ -84,7 +84,7 @@ func (c *HTTPContext) BindJSON(v any) error {
 
 // String 带有状态码的纯文本响应
 func (c *HTTPContext) String(status int, msg string) {
-	c.flush = func() (int, error) {
+	c.Flush = func() (int, error) {
 		c.Writer.WriteHeader(status)
 		return io.WriteString(c.Writer, msg)
 	}
@@ -98,16 +98,33 @@ func (c *HTTPContext) JSON(status int, v any) {
 		return
 	}
 	c.Writer.Header().Set("Content-Type", "application/json")
-	c.flush = func() (int, error) {
+	c.Flush = func() (int, error) {
 		c.Writer.WriteHeader(status)
 		return c.Writer.Write(d)
+	}
+}
+
+// Blob
+func (c *HTTPContext) Blob(status int, contentType string, data []byte) {
+	c.Writer.Header().Set("Content-Type", contentType)
+	c.Flush = func() (int, error) {
+		c.Writer.WriteHeader(status)
+		return c.Writer.Write(data)
+	}
+}
+
+// File 将静态文件返回给客户端
+func (c *HTTPContext) File(filepath string) {
+	c.Flush = func() (int, error) {
+		http.ServeFile(c.Writer, c.Request, filepath)
+		return 0, nil
 	}
 }
 
 // Render 渲染模板
 func (c *HTTPContext) Render(status int, name string, v any) {
 	if c.route.renderer != nil {
-		c.flush = func() (int, error) {
+		c.Flush = func() (int, error) {
 			c.Writer.WriteHeader(status)
 			return 0, c.route.renderer.ExecuteTemplate(c.Writer, name, v)
 		}
@@ -119,13 +136,5 @@ func (c *HTTPContext) Next() {
 	c.index++
 	if c.index < len(c.chain) {
 		c.chain[c.index](c)
-	}
-}
-
-// File 将静态文件返回给客户端
-func (c *HTTPContext) File(filepath string) {
-	c.flush = func() (int, error) {
-		http.ServeFile(c.Writer, c.Request, filepath)
-		return 0, nil
 	}
 }

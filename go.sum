@@ -1,7 +1,7 @@
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
-github.com/duomi520/utils v0.0.0-20240620103233-115603f1609b h1:121T5vfgWcVJ7XbS0TVz0ouV11WY5+sE0LsTRHN/qBc=
-github.com/duomi520/utils v0.0.0-20240620103233-115603f1609b/go.mod h1:8YQkf1fd5isC7OifXcgkZt0F15m2xeQpuhYNR1Qt73M=
+github.com/duomi520/utils v0.0.0-20240624105834-b52034c70816 h1:d8z+s9uKEeh2LkQBNzEVAdO6h3xK+XQHlJFPuLKUkZc=
+github.com/duomi520/utils v0.0.0-20240624105834-b52034c70816/go.mod h1:8YQkf1fd5isC7OifXcgkZt0F15m2xeQpuhYNR1Qt73M=
 github.com/go-playground/locales v0.14.1 h1:EWaQ/wswjilfKLTECiXz7Rh+3BjFhfDFKv/oXslEjJA=
 github.com/go-playground/locales v0.14.1/go.mod h1:hxrqLVvrK65+Rwrd5Fc6F2O76J/NuW9t0sjnWqG1slY=
 github.com/go-playground/universal-translator v0.18.1 h1:Bcnm0ZwsGyWbCzImXv+pAJnYK9S473LQFuzCbDbfSFY=

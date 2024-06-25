@@ -226,3 +226,40 @@ func TestUse(t *testing.T) {
 }
 
 // 2024/05/23 19:44:19 DEBUG |       514.2µs | 127.0.0.1:51959 |   200 |     GET | / | 2
+type testUser struct {
+	Username string `json:"username"`
+	Email    string `json:"email"`
+}
+
+func TestBindJSON(t *testing.T) {
+	r := NewRoute(validator.New(), nil)
+	r.Mux = http.NewServeMux()
+	r.Use(LoggerMiddleware())
+	fn := func(c *HTTPContext) {
+		var user testUser
+		if err := c.BindJSON(&user); err != nil {
+			c.String(http.StatusBadRequest, err.Error())
+			return
+		}
+		c.String(200, user.Username+":"+user.Email)
+	}
+	r.GET("/", fn)
+	ts := httptest.NewServer(r.Mux)
+	defer ts.Close()
+	req, err := http.NewRequest("GET", ts.URL, strings.NewReader(`{"username":"runoob", "email": "xxx@163.com"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp, err := (&http.Client{}).Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(data, []byte("runoob:xxx@163.com")) {
+		t.Errorf("got %s | expected runoob:xxx@163.com", string(data))
+	}
+}
