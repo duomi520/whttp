@@ -131,6 +131,16 @@ func (c *HTTPContext) Render(status int, name string, v any) {
 	}
 }
 
+// ValidatorStruct 验证结构体
+func (c *HTTPContext) ValidatorStruct(a any) error {
+	return c.route.validatorStruct(a)
+}
+
+// ValidatorVar  验证
+func (c *HTTPContext) ValidatorVar(a any, rule string) error {
+	return c.route.validatorVar(a, rule)
+}
+
 // Next 下一个
 func (c *HTTPContext) Next() {
 	c.index++
@@ -138,3 +148,5 @@ func (c *HTTPContext) Next() {
 		c.chain[c.index](c)
 	}
 }
+
+// https://www.cnblogs.com/f-ck-need-u/p/10035801.html

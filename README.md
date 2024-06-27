@@ -48,8 +48,6 @@ func main() {
   // 配置服务
   srv := &http.Server{
     Handler:        route.Mux,
-    ReadTimeout:    3600 * time.Second,
-    WriteTimeout:   3600 * time.Second,
     MaxHeaderBytes: 1 << 20,
   }
   route.GET("/", func(c *whttp.HTTPContext) {
@@ -89,12 +87,14 @@ func HandlerFunc(c \*whttp.HTTPContext)
 
 (whttp.HTTPContext).Request 为原始的 \*http.Request
 
-### JSON 数据绑定
+### JSON 数据绑定验证
+
+使用 validate tag 验证方式验证
 
 ```go
 type User struct {
-    Username string `json:"username"`
-    Email    string `json:"email"`
+    Username string `json:"username" validate:"required"`
+    Email    string `json:"email" validate:"email"`
 }
 func UserHandler(c *HTTPContext) {
     var user User
@@ -129,6 +129,15 @@ route.POST("/", func(c *HTTPContext) {
 })
 ```
 
+| 操作          | 解析                        | 读取 URL | 读取 Body（表单） | 支持文本 | 支持二进制 |
+| ------------- | --------------------------- | -------- | ----------------- | -------- | ---------- |
+| Form          | ParseForm                   | √        | √                 | √        |            |
+| PostForm      | ParseForm                   |          | √                 | √        |            |
+| FormValue     | 自动调用 ParseForm          | √        | √                 | √        |            |
+| PostFormValue | 自动调用 ParseForm          |          | √                 | √        |            |
+| MultipartForm | ParseMultipartForm          |          | √                 | √        | √          |
+| FormFile      | 自动调用 ParseMultipartForm |          | √                 |          | √          |
+
 ### 响应方式
 
 status 为 http 状态码，响应方式会在中间件执行完毕后执行
@@ -157,12 +166,15 @@ c.Flush = func() (int, error) {
 渲染模版文件
 
 ```go
+//解析模板文件
 tl, err := template.ParseFiles("file.tmpl")
 if err != nil {
   c.String(http.StatusInternalServerError, err.Error())
 }
+//注册模板
 route.SetRenderer(tl)
 route.GET("/", func(c *HTTPContext) {
+  //渲染模板
   c.Render(http.StatusOK, "file.tmpl", "6月7日")
 })
 ```
@@ -225,10 +237,10 @@ route.Use(LoggerMiddleware())
 
 [验证规则](https://pkg.go.dev/github.com/go-playground/validator/v10) 以":"分割
 
-变量:规则:变量:规则...
+变量:规则...
 
 ```go
-route.POST("/a/{number}", ValidatorMiddleware("a:numeric:b:gt=5"), func(c *HTTPContext) {
+route.POST("/a/{a}", ValidatorMiddleware("a:numeric","b:gt=5"), func(c *HTTPContext) {
   a :=c.Request.PathValue("a")
   b :=c.Request.PathValue("b")
 })

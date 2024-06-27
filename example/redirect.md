@@ -15,8 +15,6 @@ func main() {
 route := whttp.NewRoute(validator.New(), nil)
 srv := &http.Server{
 Handler:        route.Mux,
-ReadTimeout:    3600 * time.Second,
-WriteTimeout:   3600 * time.Second,
 MaxHeaderBytes: 1 << 20,
 }
 // http.StatusMovedPermanently 永久性重定向

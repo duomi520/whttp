@@ -22,7 +22,7 @@ str1 := `<html><form method="post" name="myForm" action="http://127.0.0.1/p">
 str2 := `"><button type="submit">Send</button></form></html>`
 c.String(http.StatusOK, str1+token+str2)
 }
-func postCSRF(c _whttp.HTTPContext) {
+func postCSRF(c *whttp.HTTPContext) {
 c.String(http.StatusOK, "hello")
 }
 func main() {
@@ -33,8 +33,6 @@ route.POST("/p", postCSRF)
 srv := &http.Server{
 //csrfMiddleware 默认只对 POST 验证
 Handler: csrfMiddleware(route.Mux),
-ReadTimeout: 3600 * time.Second,
-WriteTimeout: 3600 * time.Second,
 MaxHeaderBytes: 1 << 20,
 }
 if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {

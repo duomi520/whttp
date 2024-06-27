@@ -7,29 +7,32 @@ import (
 )
 
 // ValidatorMiddleware 输入参数验证
-func ValidatorMiddleware(a ...string) func(*HTTPContext) {
-	var s0, s1 []string
-	for _, v := range a {
+func ValidatorMiddleware(rule ...string) func(*HTTPContext) {
+	var keys, judge []string
+	if len(rule) == 0 {
+		panic("rule is nil")
+	}
+	for _, v := range rule {
 		s := strings.Split(v, ":")
 		if len(s) != 2 {
-			panic(fmt.Sprintf("bad describe %s", v))
+			panic("bad describe " + v)
 		}
-		s0 = append(s0, s[0])
-		s1 = append(s1, s[1])
+		keys = append(keys, s[0])
+		judge = append(judge, s[1])
 	}
 	return func(c *HTTPContext) {
-		for i := range s0 {
-			v := c.Request.PathValue(s0[i])
+		for i := range keys {
+			v := c.Request.PathValue(keys[i])
 			if len(v) > 0 {
-				if err := c.route.validatorVar(v, s1[i]); err != nil {
-					c.String(http.StatusBadRequest, fmt.Sprintf("validate %s %s faile: %s", s0[i], s1[i], err.Error()))
+				if err := c.route.validatorVar(v, judge[i]); err != nil {
+					c.String(http.StatusBadRequest, fmt.Sprintf("path validate %s:%s %s faile: %s", keys[i], v, judge[i], err.Error()))
 					return
 				}
 			}
-			v = c.Request.FormValue(s0[i])
+			v = c.Request.FormValue(keys[i])
 			if len(v) > 0 {
-				if err := c.route.validatorVar(v, s1[i]); err != nil {
-					c.String(http.StatusBadRequest, fmt.Sprintf("validate %s %s faile: %s", s0[i], s1[i], err.Error()))
+				if err := c.route.validatorVar(v, judge[i]); err != nil {
+					c.String(http.StatusBadRequest, fmt.Sprintf("form validate %s:%s %s faile: %s", keys[i], v, judge[i], err.Error()))
 					return
 				}
 			}

@@ -19,8 +19,6 @@ route := whttp.NewRoute(validator.New(), nil)
  //配置服务
 srv := &http.Server{
 Handler:        route.Mux,
-ReadTimeout:    3600 * time.Second,
-WriteTimeout:   3600 * time.Second,
 MaxHeaderBytes: 1 << 20,
 }
 route.Static("/", "upload.html")

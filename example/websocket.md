@@ -39,8 +39,6 @@ r.GET("/echo", echo)
 //启动服务
 srv := &http.Server{
 Handler:        r.Mux,
-ReadTimeout:    3600 * time.Second,
-WriteTimeout:   3600 * time.Second,
 MaxHeaderBytes: 1 << 20,
 }
 if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {

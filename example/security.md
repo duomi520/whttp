@@ -1,5 +1,7 @@
 # 安全
 
+Security 所提供的配置项是为了简化一些常见的 HTTP headers 的配置，如对配置项配置 HTTP headers 的作用感到困惑，可以自行在 [MDN Docs](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers) 中进行查询它们的作用
+
 ```go
 package main
 
@@ -28,8 +30,6 @@ route.Use(whttp.HeaderMiddleware(security))
 //配置服务
 srv := &http.Server{
 Handler: route.Mux,
-ReadTimeout: 3600 _ time.Second,
-WriteTimeout: 3600 _ time.Second,
 MaxHeaderBytes: 1 << 20,
 }
 if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {

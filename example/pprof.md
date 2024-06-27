@@ -21,8 +21,6 @@ route.Mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
 route.Mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
 srv := &http.Server{
 Handler: route.Mux,
-ReadTimeout: 3600 _ time.Second,
-WriteTimeout: 3600 _ time.Second,
 MaxHeaderBytes: 1 << 20,
 }
 route.GET("/", func(c *whttp.HTTPContext) {
