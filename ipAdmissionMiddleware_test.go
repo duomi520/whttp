@@ -2,7 +2,7 @@ package whttp
 
 import (
 	"bytes"
-	"github.com/go-playground/validator"
+	"github.com/go-playground/validator/v10"
 	"io"
 	"net"
 	"net/http"

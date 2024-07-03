@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-playground/validator"
+	"github.com/go-playground/validator/v10"
 )
 
 func TestFormValue(t *testing.T) {

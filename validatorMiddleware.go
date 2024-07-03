@@ -71,22 +71,20 @@ eq：等于参数值，注意与len不同。对于字符串，eq约束字符串�
 len：等于参数值，例如len=10；
 max：小于等于参数值，例如max=10；
 min：大于等于参数值，例如min=10
-
 Fields约束
 eqfield：定义字段间的相等约束，用于约束同一结构体中的字段。例如：eqfield=Password
 eqcsfield：约束统一结构体中字段等于另一个字段（相对），确认密码时可以使用，例如：eqfiel=ConfirmPassword
 nefield：用来约束两个字段是否相同，确认两种颜色是否一致时可以使用，例如：nefield=Color1
 necsfield：约束两个字段是否相同（相对）
-
 常用约束
 unique：指定唯一性约束，不同类型处理不同：
 对于map，unique约束没有重复的值
 对于数组和切片，unique没有重复的值
-对于元素类型为结构体的碎片，unique约束结构体对象的某个字段不重复，使用unique=field指定字段名email：使用email来限制字段必须是邮件形式，直接写eamil即可，无需加任何指定。
+对于元素类型为结构体的碎片，unique约束结构体对象的某个字段不重复，使用unique=field指定字段名
+email：使用email来限制字段必须是邮件形式，直接写eamil即可，无需加任何指定。
 
 omitempty：字段未设置，则忽略
 -：跳过该字段，不检验；
 |：使用多个约束，只需要满足其中一个，例如rgb|rgba；
 required：字段必须设置，不能为默认值；
-
 */
