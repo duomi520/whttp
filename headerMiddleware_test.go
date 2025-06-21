@@ -6,13 +6,11 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
-
-	"github.com/go-playground/validator/v10"
 )
 
 func TestClickjacking(t *testing.T) {
 	slog.SetLogLoggerLevel(slog.LevelDebug)
-	r := NewRoute(validator.New(), nil)
+	r := NewRoute(nil)
 	r.Mux = http.NewServeMux()
 	r.Use(HeaderMiddleware(map[string]string{"frame-ancestors": "none", "X-Frame-Optoins": "DENY"}))
 	fn := func(c *HTTPContext) {

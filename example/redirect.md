@@ -5,14 +5,13 @@ package main
 
 import (
 "github.com/duomi520/whttp"
-"github.com/go-playground/validator"
 "log/slog"
 "net/http"
 "time"
 )
 
 func main() {
-route := whttp.NewRoute(validator.New(), nil)
+route := whttp.NewRoute(nil)
 srv := &http.Server{
 Handler:        route.Mux,
 MaxHeaderBytes: 1 << 20,

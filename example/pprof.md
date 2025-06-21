@@ -5,7 +5,6 @@ package main
 
 import (
 "github.com/duomi520/whttp"
-"github.com/go-playground/validator"
 "log/slog"
 "net/http"
 "net/http/pprof"
@@ -13,7 +12,7 @@ import (
 )
 
 func main() {
-route := whttp.NewRoute(validator.New(), nil)
+route := whttp.NewRoute(nil)
 route.Mux.HandleFunc("/debug/pprof/", pprof.Index)
 route.Mux.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
 route.Mux.HandleFunc("/debug/pprof/profile", pprof.Profile)

@@ -12,10 +12,9 @@ import (
 "text/template"
 "time"
 "github.com/duomi520/whttp"
-"github.com/go-playground/validator"
 )
 func main() {
-route := whttp.NewRoute(validator.New(), nil)
+route := whttp.NewRoute(nil)
  //配置服务
 srv := &http.Server{
 Handler:        route.Mux,

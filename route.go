@@ -8,8 +8,6 @@ import (
 	"net/http"
 	"runtime"
 	"strings"
-
-	"github.com/duomi520/utils"
 )
 
 // DefaultMarshal 缺省JSON编码器
@@ -30,9 +28,6 @@ type Renderer interface {
 type WRoute struct {
 	debugMode bool
 	Mux       *http.ServeMux
-	//validator
-	validatorVar    func(any, string) error
-	validatorStruct func(any) error
 	//模版
 	renderer Renderer
 	//HTTPContext String、JSON、Render IO Write时错误的处理函数
@@ -42,14 +37,9 @@ type WRoute struct {
 }
 
 // NewRoute 新建
-func NewRoute(v utils.IValidator, l *slog.Logger) *WRoute {
+func NewRoute(l *slog.Logger) *WRoute {
 	r := WRoute{}
 	r.Mux = http.NewServeMux()
-	if v == nil {
-		panic("Validator is nil")
-	}
-	r.validatorVar = v.Var
-	r.validatorStruct = v.Struct
 	r.HookIOWriteError = func(c *HTTPContext, n int, err error) {
 		if err != nil {
 			pc, _, l, _ := runtime.Caller(2)

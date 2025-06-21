@@ -5,7 +5,6 @@ package main
 import (
 "github.com/bytedance/sonic"
 "github.com/duomi520/whttp"
-"github.com/go-playground/validator"
 "log/slog"
 "net/http"
 "time"
@@ -13,7 +12,7 @@ import (
 func main() {
 whttp.DefaultMarshal = sonic.Marshal
 whttp.DefaultUnmarshal = sonic.Unmarshal
-route := whttp.NewRoute(validator.New(), nil)
+route := whttp.NewRoute(nil)
 //配置服务
 srv := &http.Server{
 Handler: route.Mux,

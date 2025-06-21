@@ -8,10 +8,9 @@ import (
 "net/http"
 "time"
 "github.com/duomi520/whttp"
-"github.com/go-playground/validator"
 )
 func main() {
-route := whttp.NewRoute(validator.New(), nil)
+route := whttp.NewRoute(nil)
 //配置服务
 srv := &http.Server{
 Handler: route.Mux,
@@ -21,6 +20,7 @@ route.GET("/SSEvent", func(c *whttp.HTTPContext) {
 c.Writer.Header().Set("Content-Type", "text/event-stream")
 c.Writer.Header().Set("Cache-Control", "no-cache")
 c.Writer.Header().Set("Connection", "keep-alive")
+c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
 flusher, err := c.Writer.(http.Flusher)
 if !err {
 c.String(http.StatusInternalServerError, "streaming unsupported!")

@@ -8,13 +8,11 @@ import (
 	"strings"
 	"testing"
 	"time"
-
-	"github.com/go-playground/validator/v10"
 )
 
 func TestJWTMiddleware(t *testing.T) {
 	j := JWT{TokenSigningKey: []byte("TokenSigningKey"), TokenExpires: time.Duration(time.Second)}
-	r := NewRoute(validator.New(), nil)
+	r := NewRoute(nil)
 	r.Mux = http.NewServeMux()
 	fn := func(c *HTTPContext) {
 		id, _ := c.Get("id")

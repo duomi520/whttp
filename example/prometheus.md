@@ -9,7 +9,6 @@ import (
 "time"
 
 "github.com/duomi520/whttp"
-"github.com/go-playground/validator"
 "github.com/prometheus/client_golang/prometheus"
 "github.com/prometheus/client_golang/prometheus/promauto"
 "github.com/prometheus/client_golang/prometheus/promhttp"
@@ -35,7 +34,7 @@ Help: "The total number of processed events",
 
 func main() {
 recordMetrics()
-route := whttp.NewRoute(validator.New(), nil)
+route := whttp.NewRoute(nil)
 srv := &http.Server{
 Handler:        route.Mux,
 MaxHeaderBytes: 1 << 20,

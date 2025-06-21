@@ -7,7 +7,6 @@ import (
 "net/http"
 "time"
 "github.com/duomi520/whttp"
-"github.com/go-playground/validator"
 "github.com/gorilla/csrf"
 )
 
@@ -26,7 +25,7 @@ func postCSRF(c *whttp.HTTPContext) {
 c.String(http.StatusOK, "hello")
 }
 func main() {
-route := whttp.NewRoute(validator.New(), nil)
+route := whttp.NewRoute(nil)
 csrfMiddleware := csrf.Protect([]byte("32-byte-long-auth-key"))
 route.GET("/g", getCSRF)
 route.POST("/p", postCSRF)

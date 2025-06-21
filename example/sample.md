@@ -6,7 +6,6 @@ package main
 import (
  "context"
  "github.com/duomi520/whttp"
- "github.com/go-playground/validator"
  "log/slog"
  "net/http"
  "os"
@@ -14,10 +13,12 @@ import (
  "syscall"
  "time"
 )
-
+const (
+ Version ="1.0.1"
+)
 func main() {
  var mf whttp.MemoryFile
- route := whttp.NewRoute(validator.New(), nil)
+ route := whttp.NewRoute(nil)
  //配置服务
  srv := &http.Server{
   Handler:        route.Mux,
@@ -39,6 +40,10 @@ func main() {
  //ping
  route.GET("/ping", func(c *whttp.HTTPContext) {
   c.String(http.StatusOK, "pong")
+ })
+ //version
+ route.GET("/version", func(c *whttp.HTTPContext) {
+  c.String(http.StatusOK, Version)
  })
  //favicon.ico
  route.CacheFile("favicon.ico", &mf)

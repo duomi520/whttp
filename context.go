@@ -75,10 +75,6 @@ func (c *HTTPContext) BindJSON(v any) error {
 	if err != nil {
 		return fmt.Errorf("unmarshal %v faile: %w", v, err)
 	}
-	err = c.route.validatorStruct(v)
-	if err != nil {
-		return fmt.Errorf("validator %v faile: %w", v, err)
-	}
 	return nil
 }
 
@@ -129,16 +125,6 @@ func (c *HTTPContext) Render(status int, name string, v any) {
 			return 0, c.route.renderer.ExecuteTemplate(c.Writer, name, v)
 		}
 	}
-}
-
-// ValidatorStruct 验证结构体
-func (c *HTTPContext) ValidatorStruct(a any) error {
-	return c.route.validatorStruct(a)
-}
-
-// ValidatorVar  验证
-func (c *HTTPContext) ValidatorVar(a any, rule string) error {
-	return c.route.validatorVar(a, rule)
 }
 
 // Next 下一个

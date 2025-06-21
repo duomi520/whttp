@@ -7,7 +7,6 @@ package main
 
 import (
 "github.com/duomi520/whttp"
-"github.com/go-playground/validator"
 "log/slog"
 "net/http"
 "time"
@@ -25,7 +24,7 @@ var security = map[string]string{
 }
 
 func main() {
-route := whttp.NewRoute(validator.New(), nil)
+route := whttp.NewRoute(nil)
 route.Use(whttp.HeaderMiddleware(security))
 //配置服务
 srv := &http.Server{

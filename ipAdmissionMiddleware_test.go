@@ -2,7 +2,6 @@ package whttp
 
 import (
 	"bytes"
-	"github.com/go-playground/validator/v10"
 	"io"
 	"net"
 	"net/http"
@@ -69,7 +68,7 @@ func TestWhitelistMiddleware(t *testing.T) {
 	fn := func(c *HTTPContext) {
 		c.String(200, "拦截失败")
 	}
-	r := NewRoute(validator.New(), nil)
+	r := NewRoute(nil)
 	r.Mux = http.NewServeMux()
 	r.GET("/", list.WhitelistMiddleware(), fn)
 	ts := httptest.NewServer(r.Mux)

@@ -7,7 +7,6 @@ import (
 "net/http"
 "time"
 "github.com/duomi520/whttp"
-"github.com/go-playground/validator"
 "github.com/gorilla/websocket"
 )
 var upgrader = websocket.Upgrader{}
@@ -33,7 +32,7 @@ break
 }
 }
 func main() {
-r := whttp.NewRoute(validator.New(), nil)
+r := whttp.NewRoute(nil)
 r.Static("/", "index.html")
 r.GET("/echo", echo)
 //启动服务

@@ -12,11 +12,10 @@ import (
 "syscall"
 "time"
 "github.com/duomi520/whttp"
-"github.com/go-playground/validator"
 )
 
 func service1(srv *http.Server) {
-route := whttp.NewRoute(validator.New(), nil)
+route := whttp.NewRoute(nil)
 srv.Addr = ":8080"
 srv.Handler = route.Mux
 route.GET("/", func(c *whttp.HTTPContext) {
@@ -27,7 +26,7 @@ slog.Error(err.Error())
 }
 }
 func service2(srv *http.Server) {
-route := whttp.NewRoute(validator.New(), nil)
+route := whttp.NewRoute(nil)
 srv.Addr = ":8090"
 srv.Handler = route.Mux
 route.GET("/", func(c *whttp.HTTPContext) {

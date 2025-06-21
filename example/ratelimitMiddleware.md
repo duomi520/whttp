@@ -11,7 +11,6 @@ import (
 "github.com/duomi520/whttp"
 "github.com/go-kratos/aegis/ratelimit"
 "github.com/go-kratos/aegis/ratelimit/bbr"
-"github.com/go-playground/validator"
 
 )
 
@@ -32,7 +31,7 @@ limiter := bbr.NewLimiter(
 bbr.WithWindow(time.Second),
 bbr.WithBucket(50),
 bbr.WithCPUThreshold(100))
-route := whttp.NewRoute(validator.New(), nil)
+route := whttp.NewRoute(nil)
 srv := &http.Server{
 Handler: route.Mux,
 MaxHeaderBytes: 1 << 20,

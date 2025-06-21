@@ -10,7 +10,6 @@ import (
 "time"
 
 "github.com/duomi520/whttp"
-"github.com/go-playground/validator"
 "github.com/gorilla/securecookie"
 "github.com/gorilla/sessions"
 )
@@ -37,7 +36,7 @@ c.String(http.StatusOK, fmt.Sprintf("name:%s age:%d\n", session.Values["name"], 
 }
 
 func main() {
-route := whttp.NewRoute(validator.New(), nil)
+route := whttp.NewRoute(nil)
 //配置服务
 srv := &http.Server{
 Handler:        route.Mux,

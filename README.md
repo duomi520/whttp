@@ -37,13 +37,12 @@ package main
 
 import (
   "github.com/duomi520/whttp"
-  "github.com/go-playground/validator"
   "log/slog"
   "net/http"
 )
 
 func main() {
-  route := whttp.NewRoute(validator.New(), nil)
+  route := whttp.NewRoute(nil)
   // 配置服务
   srv := &http.Server{
     Handler:        route.Mux,
@@ -85,26 +84,6 @@ func HandlerFunc(c \*whttp.HTTPContext)
 (whttp.HTTPContext).Writer 为原始的 http.ResponseWriter
 
 (whttp.HTTPContext).Request 为原始的 \*http.Request
-
-### JSON 数据绑定验证
-
-使用 validate tag 验证方式验证
-
-```go
-type User struct {
-    Username string `json:"username" validate:"required"`
-    Email    string `json:"email" validate:"email"`
-}
-func UserHandler(c *HTTPContext) {
-    var user User
-    if err := c.BindJSON(&user); err != nil {
-        // 处理错误并返回错误信息给客户端
-        c.String(http.StatusBadRequest,  err.Error())
-        return
-    }
-    // 解析成功，可以使用user结构体变量
-}
-```
 
 ### 路由参数
 
@@ -230,19 +209,6 @@ route.GET("/some", append(g, Endpoint)...)
 
 ```go
 route.Use(LoggerMiddleware())
-```
-
-### 验证数据中间件
-
-[验证规则](https://pkg.go.dev/github.com/go-playground/validator/v10) 以":"分割
-
-变量:规则...
-
-```go
-route.POST("/a/{a}", ValidatorMiddleware("a:numeric","b:gt=5"), func(c *HTTPContext) {
-  a :=c.Request.PathValue("a")
-  b :=c.Request.PathValue("b")
-})
 ```
 
 ### 自定义日志

@@ -11,12 +11,10 @@ import (
 	"strings"
 	"testing"
 	"time"
-
-	"github.com/go-playground/validator/v10"
 )
 
 func TestFormValue(t *testing.T) {
-	r := NewRoute(validator.New(), nil)
+	r := NewRoute(nil)
 	r.Mux = http.NewServeMux()
 	fn := func(c *HTTPContext) {
 		if (strings.Compare(c.Request.FormValue("name"), "linda") == 0) && (strings.Compare(c.Request.FormValue("mobile"), "xxxxxxxx") == 0) {
@@ -44,7 +42,7 @@ func TestFormValue(t *testing.T) {
 
 }
 func TestParams(t *testing.T) {
-	r := NewRoute(validator.New(), nil)
+	r := NewRoute(nil)
 	r.Mux = http.NewServeMux()
 	fn := func(c *HTTPContext) {
 		if (strings.Compare(c.Request.PathValue("name"), "linda") == 0) && (strings.Compare(c.Request.PathValue("mobile"), "xxxxxxxx") == 0) {
@@ -73,7 +71,7 @@ func TestParams(t *testing.T) {
 
 func TestMiddleware(t *testing.T) {
 	signature := ""
-	r := NewRoute(validator.New(), nil)
+	r := NewRoute(nil)
 	r.Mux = http.NewServeMux()
 	MiddlewareA := func() func(*HTTPContext) {
 		return func(c *HTTPContext) {
@@ -115,7 +113,7 @@ func TestMiddleware(t *testing.T) {
 }
 
 func TestMethod(t *testing.T) {
-	r := NewRoute(validator.New(), nil)
+	r := NewRoute(nil)
 	r.Mux = http.NewServeMux()
 	r.logger = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
 		ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
@@ -150,7 +148,7 @@ time="2024-05-01 00:15:08" level=ERROR msg="not a POST request"
 */
 
 func TestFile(t *testing.T) {
-	r := NewRoute(validator.New(), nil)
+	r := NewRoute(nil)
 	r.Mux = http.NewServeMux()
 	fn := func(c *HTTPContext) {
 		c.File("txt/a.txt")
@@ -177,7 +175,7 @@ func TestRender(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	r := NewRoute(validator.New(), nil)
+	r := NewRoute(nil)
 	r.Mux = http.NewServeMux()
 	r.SetRenderer(tl)
 	fn := func(c *HTTPContext) {
@@ -202,7 +200,7 @@ func TestRender(t *testing.T) {
 
 func TestUse(t *testing.T) {
 	slog.SetLogLoggerLevel(slog.LevelDebug)
-	r := NewRoute(validator.New(), nil)
+	r := NewRoute(nil)
 	r.Mux = http.NewServeMux()
 	r.Use(LoggerMiddleware())
 	fn := func(c *HTTPContext) {
@@ -232,7 +230,7 @@ type testUser struct {
 }
 
 func TestBindJSON(t *testing.T) {
-	r := NewRoute(validator.New(), nil)
+	r := NewRoute(nil)
 	r.Mux = http.NewServeMux()
 	r.Use(LoggerMiddleware())
 	fn := func(c *HTTPContext) {

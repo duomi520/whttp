@@ -9,13 +9,11 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
-
-	"github.com/go-playground/validator/v10"
 )
 
 func TestBasicAuthMiddlewareMiddleware(t *testing.T) {
 	slog.SetLogLoggerLevel(slog.LevelDebug)
-	r := NewRoute(validator.New(), nil)
+	r := NewRoute(nil)
 	r.Mux = http.NewServeMux()
 	v := func(c *HTTPContext, u, p string) bool {
 		if u == "joe" && p == "secret" {
