@@ -43,6 +43,7 @@ if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 slog.Error(err.Error())
 }
 }
-// https://www.jianshu.com/p/ec43d44ff59b
-// https://www.cnblogs.com/daemon365/p/15227815.html
 ```
+
+- <https://www.jianshu.com/p/ec43d44ff59b>
+- <https://www.cnblogs.com/daemon365/p/15227815.html>

@@ -5,7 +5,6 @@ WHTTP 是一个用[Go](https://go.dev/) 开发的 web 脚手架，基于标准�
 **特性:**
 
 - 中间件支持
-- 验证
 - 缓存文件
 
 ## 开始
@@ -161,7 +160,7 @@ route.GET("/", func(c *HTTPContext) {
 
 ### 静态文件服务
 
-group 为中间件函数
+group 为中间件函数，Static 单个文件服务，StaticFS 目录服务
 
 func (r *WRoute) Static(relativePath, root string, group ...func(*HTTPContext))
 

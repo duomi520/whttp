@@ -225,8 +225,8 @@ func TestUse(t *testing.T) {
 
 // 2024/05/23 19:44:19 DEBUG |       514.2µs | 127.0.0.1:51959 |   200 |     GET | / | 2
 type testUser struct {
-	Username string `json:"username" validate:"required"`
-	Email    string `json:"email" validate:"email"`
+	Username string `json:"username"`
+	Email    string `json:"email"`
 }
 
 func TestBindJSON(t *testing.T) {
