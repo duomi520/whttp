@@ -12,27 +12,26 @@ func BasicAuthMiddleware(valid func(c *HTTPContext, username, password string) b
 	}
 	return func(c *HTTPContext) {
 		auth := c.Request.Header.Get("Authorization")
-		basic := "Basic"
-		l := len(basic)
-		if len(auth) > l+1 && strings.EqualFold(auth[:l], basic) {
-			b, err := base64.StdEncoding.DecodeString(auth[l+1:])
-			if err != nil {
-				c.String(http.StatusBadRequest, err.Error())
-			}
-			cred := string(b)
-			for i := 0; i < len(cred); i++ {
-				if cred[i] == ':' {
-					ok := valid(c, cred[:i], cred[i+1:])
+		const prefix = "Basic "
+		l := len(prefix)
+		if len(auth) > len(prefix) && strings.EqualFold(auth[:l], prefix) {
+			encoded := strings.TrimSpace(auth[l:])
+			decoded, err := base64.StdEncoding.DecodeString(encoded)
+			if err == nil {
+				cred := string(decoded)
+				name, pw, found := strings.Cut(cred, ":")
+				if found && len(name) > 0 {
+					ok := valid(c, name, pw)
 					if ok {
 						c.Next()
 						return
 					}
-					break
 				}
+
 			}
 		}
-		c.Writer.Header().Set("WWW-Authenticate", "Base realm=\"Restricted\" charset=\"UTF-8\"")
-		c.String(http.StatusUnauthorized, "")
+		c.Writer.Header().Set("WWW-Authenticate", "Base realm=\"Restricted\"")
+		c.String(http.StatusUnauthorized, "Unauthorized")
 	}
 }
 

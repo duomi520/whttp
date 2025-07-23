@@ -1,4 +1,4 @@
-github.com/duomi520/utils v0.0.0-20250618150349-b8fe92c4bbad h1:ka1XRgeIRUXY9ZvClZkj6FSqwJK+lajDdjydlUwizCA=
-github.com/duomi520/utils v0.0.0-20250618150349-b8fe92c4bbad/go.mod h1:8YQkf1fd5isC7OifXcgkZt0F15m2xeQpuhYNR1Qt73M=
+github.com/duomi520/utils v0.0.0-20250718105501-614f6bdcf696 h1:3Q5FouCgnG73B9j6IVLnWfpi0UnMwEorJ44Pvp/rHGA=
+github.com/duomi520/utils v0.0.0-20250718105501-614f6bdcf696/go.mod h1:8YQkf1fd5isC7OifXcgkZt0F15m2xeQpuhYNR1Qt73M=
 github.com/golang-jwt/jwt/v4 v4.5.2 h1:YtQM7lnr8iZ+j5q71MGKkNw9Mn7AjHM68uc9g5fXeUI=
 github.com/golang-jwt/jwt/v4 v4.5.2/go.mod h1:m21LjoU+eqJr34lmDMbreY2eSTRJ1cv77w39/MY0Ch0=

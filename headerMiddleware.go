@@ -3,7 +3,7 @@ package whttp
 func HeaderMiddleware(h map[string]string) func(*HTTPContext) {
 	return func(c *HTTPContext) {
 		for k, v := range h {
-			c.Writer.Header().Set(k, v)
+			c.Writer.Header().Add(k, v)
 		}
 		c.Next()
 	}

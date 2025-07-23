@@ -10,7 +10,7 @@ import (
 
 func TestLoggerMiddleware(t *testing.T) {
 	slog.SetLogLoggerLevel(slog.LevelDebug)
-	fn := func(c *HTTPContext) {}
+	fn := func(c *HTTPContext) { c.String(200, "Hi") }
 	r := NewRoute(nil)
 	r.Mux = http.NewServeMux()
 	r.POST("/p", LoggerMiddleware(), fn)
@@ -29,6 +29,6 @@ func TestLoggerMiddleware(t *testing.T) {
 }
 
 /*
-2024/05/19 13:26:54 DEBUG |            0s | 127.0.0.1:49389 |     0 |    POST | /p | 0
-2024/05/19 13:26:54 DEBUG |            0s | 127.0.0.1:49389 |     0 |     GET | /g | 0
+2025/07/21 20:51:03 DEBUG | 0s            | 127.0.0.1:53422 | 200 | POST    | /p                                       |       2 bytes
+2025/07/21 20:51:03 DEBUG | 0s            | 127.0.0.1:53423 | 200 | GET     | /g                                       |       2 bytes
 */

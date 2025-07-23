@@ -4,33 +4,48 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
-	"strconv"
 	"time"
 )
 
-var formatLogger string = "| %13v | %15s | %5d | %7s | %s | %s "
+var formatLogger string = "| %-13v | %-15s | %3d | %-7s | %-40s | %7d bytes "
 
 // LoggerMiddleware 日志
 func LoggerMiddleware() func(*HTTPContext) {
 	var h httpLoggerResponseWriter
 	return func(c *HTTPContext) {
-		h.startTime = time.Now()
+		startTime := time.Now()
 		h.r = c.Request
 		h.w = c.Writer
 		c.Writer = &h
 		c.Next()
-		if c.Flush == nil {
-			h.log(0, nil)
+		flush := c.Flush
+		c.Flush = func() (n int, err error) {
+			if flush != nil {
+				n, err = flush()
+			}
+			latency := time.Since(startTime)
+			// 智能截断过长的延迟显示
+			if latency > time.Minute {
+				latency = latency.Truncate(time.Millisecond)
+			}
+			switch {
+			case h.status >= http.StatusInternalServerError:
+				slog.Error(fmt.Sprintf(formatLogger, latency, h.r.RemoteAddr, h.status, h.r.Method, h.r.URL, n))
+			case h.status >= http.StatusBadRequest:
+				slog.Warn(fmt.Sprintf(formatLogger, latency, h.r.RemoteAddr, h.status, h.r.Method, h.r.URL, n))
+			default:
+				slog.Debug(fmt.Sprintf(formatLogger, latency, h.r.RemoteAddr, h.status, h.r.Method, h.r.URL, n))
+			}
+			return
 		}
 	}
 }
 
 // httpLoggerResponseWriter d
 type httpLoggerResponseWriter struct {
-	startTime time.Time
-	status    int
-	r         *http.Request
-	w         http.ResponseWriter
+	status int
+	r      *http.Request
+	w      http.ResponseWriter
 }
 
 // Header 返回一个Header类型值
@@ -47,23 +62,7 @@ func (h *httpLoggerResponseWriter) WriteHeader(s int) {
 // Write 向连接中写入作为HTTP的一部分回复的数据
 func (h *httpLoggerResponseWriter) Write(d []byte) (int, error) {
 	n, err := h.w.Write(d)
-	h.log(n, err)
 	return n, err
-}
-func (h *httpLoggerResponseWriter) log(n int, err error) {
-	latency := time.Since(h.startTime)
-	if latency > time.Minute {
-		latency = latency.Truncate(time.Second)
-	}
-	if h.status > 299 {
-		if err != nil {
-			slog.Error(fmt.Sprintf(formatLogger, latency, h.r.RemoteAddr, h.status, h.r.Method, h.r.URL, err.Error()))
-		} else {
-			slog.Warn(fmt.Sprintf(formatLogger, latency, h.r.RemoteAddr, h.status, h.r.Method, h.r.URL, strconv.Itoa(n)))
-		}
-	} else {
-		slog.Debug(fmt.Sprintf(formatLogger, latency, h.r.RemoteAddr, h.status, h.r.Method, h.r.URL, strconv.Itoa(n)))
-	}
 }
 
 // https://www.cnblogs.com/cheyunhua/p/18049634

@@ -3,6 +3,7 @@ package whttp
 import (
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"net"
 
 	"net/http"
@@ -11,14 +12,15 @@ import (
 )
 
 // IPv4子网中，起始IP（最小地址）为该网段的网络地址,如192.168.0.0，结束IP（最大地址）为该网段的广播地址，如192.168.0.255，不可分配给用户使用。如可分配给用户的有效IP范围是192.168.0.1～192.168.0.254。
-func calculateCount(ipNet *net.IPNet) int {
-	maskLen, _ := ipNet.Mask.Size()
-	if maskLen == 32 {
-		return 1
+func calculateAvailableCount(ipNet *net.IPNet) int {
+	ones, bits := ipNet.Mask.Size()
+	// IPv4
+	if bits == 32 {
+		total := 1 << (bits - ones)
+		return total
 	}
-	//2的几次方
-	count := 1 << (32 - maskLen)
-	return count
+	// IPv6 没有网络/广播地址概念
+	return 1 << (bits - ones)
 }
 
 // IPAdmission IP准入
@@ -35,113 +37,95 @@ var IPAdmissioneEmpty struct{}
 // ParseNode 添加规则
 func (f *IPAdmission) ParseNode(line string) error {
 	if !strings.Contains(line, "/") {
-		parsedIP := net.ParseIP(line)
-		if ipv4 := parsedIP.To4(); ipv4 != nil {
-			parsedIP = ipv4
-		}
-		if parsedIP != nil {
-			switch len(parsedIP) {
-			case net.IPv4len:
-				key32 := binary.BigEndian.Uint32(parsedIP)
+		if ipAddr := net.ParseIP(line); ipAddr != nil {
+			IPV4 := ipAddr.To4()
+			if IPV4 != nil {
+				key32 := binary.BigEndian.Uint32(IPV4)
 				f.Store(key32, IPAdmissioneEmpty)
-			case net.IPv6len:
+			} else {
 				f.Store(line, IPAdmissioneEmpty)
 			}
+			return nil
 		}
-	} else {
-		baseIP, ipNet, err := net.ParseCIDR(line)
-		if err != nil {
-			return err
-		}
-		if ipv4 := baseIP.To4(); ipv4 != nil {
-			baseIP = ipv4
-		}
-		size := calculateCount(ipNet)
-		if baseIP != nil {
-			switch len(baseIP) {
-			case net.IPv4len:
-				key32 := binary.BigEndian.Uint32(ipNet.IP.To4())
-				for i := 0; i < size; i++ {
-					f.Store(key32+uint32(i), IPAdmissioneEmpty)
-				}
-			case net.IPv6len:
-				//TODO
-				return errors.New("不支持IPv6 的 CIDR")
-			}
-		}
+		return fmt.Errorf("invalid IP: %s", line)
 	}
-	return nil
+	// CIDR 处理
+	baseIP, ipNet, err := net.ParseCIDR(line)
+	if err != nil {
+		return err
+	}
+	// IPv4 CIDR
+	ipv4 := baseIP.To4()
+	size := calculateAvailableCount(ipNet)
+	if ipv4 != nil && len(ipv4) == net.IPv4len {
+		key32 := binary.BigEndian.Uint32(ipNet.IP.To4())
+		for i := range size {
+			f.Store(key32+uint32(i), IPAdmissioneEmpty)
+		}
+		return nil
+	}
+	return errors.New("CIDR 失败")
 }
 
 // RemoveNode 移除规则
 func (f *IPAdmission) RemoveNode(line string) error {
 	if !strings.Contains(line, "/") {
-		parsedIP := net.ParseIP(line)
-		if ipv4 := parsedIP.To4(); ipv4 != nil {
-			parsedIP = ipv4
-		}
-		if parsedIP != nil {
-			switch len(parsedIP) {
-			case net.IPv4len:
-				key32 := binary.BigEndian.Uint32(parsedIP)
+		if ipAddr := net.ParseIP(line); ipAddr != nil {
+			IPV4 := ipAddr.To4()
+			if IPV4 != nil {
+				key32 := binary.BigEndian.Uint32(IPV4)
 				f.Delete(key32)
-			case net.IPv6len:
+			} else {
 				f.Delete(line)
 			}
+			return nil
 		}
-	} else {
-		baseIP, ipNet, err := net.ParseCIDR(line)
-		if err != nil {
-			return err
-		}
-		if ipv4 := baseIP.To4(); ipv4 != nil {
-			baseIP = ipv4
-		}
-		size := calculateCount(ipNet)
-		if baseIP != nil {
-			switch len(baseIP) {
-			case net.IPv4len:
-				key32 := binary.BigEndian.Uint32(ipNet.IP.To4())
-				for i := 0; i < size; i++ {
-					f.Delete(key32 + uint32(i))
-				}
-			case net.IPv6len:
-				//TODO
-				return errors.New("不支持IPv6 的 CIDR")
-			}
-		}
+		return fmt.Errorf("invalid IP: %s", line)
 	}
-	return nil
+	// CIDR 处理
+	baseIP, ipNet, err := net.ParseCIDR(line)
+	if err != nil {
+		return err
+	}
+	// IPv4 CIDR
+	ipv4 := baseIP.To4()
+	size := calculateAvailableCount(ipNet)
+	if ipv4 != nil && len(ipv4) == net.IPv4len {
+		key32 := binary.BigEndian.Uint32(ipNet.IP.To4())
+		for i := range size {
+			f.Delete(key32 + uint32(i))
+		}
+		return nil
+	}
+	return errors.New("CIDR 失败")
 }
 
 // Check 检查某个ip在不在设置的规则里
-func (f *IPAdmission) Check(line string) any {
+func (f *IPAdmission) Check(line string) bool {
 	remoteIP := net.ParseIP(line)
+	if remoteIP == nil {
+		return false
+	}
+	// IPv4 检查
 	if ipv4 := remoteIP.To4(); ipv4 != nil {
-		remoteIP = ipv4
+		key32 := binary.BigEndian.Uint32(ipv4)
+		_, ok := f.Load(key32)
+		return ok
 	}
-	if remoteIP != nil {
-		switch len(remoteIP) {
-		case net.IPv4len:
-			key32 := binary.BigEndian.Uint32(remoteIP)
-			_, ok := f.Load(key32)
-			return ok
-		case net.IPv6len:
-			_, ok := f.Load(line)
-			return ok
-		}
-	}
-	return false
+	// IPv6 检查
+	_, ok := f.Load(line)
+	return ok
 }
 
 // WhitelistMiddleware 白名单。
 func (f *IPAdmission) WhitelistMiddleware() func(*HTTPContext) {
 	return func(c *HTTPContext) {
 		ip := ClientIP(c.Request)
-		if f.Check(ip).(bool) {
+		if f.Check(ip) {
 			c.Next()
 		} else {
-			c.String(http.StatusUnauthorized, "拒绝访问")
+			c.Warn("IP blocked", "ip", ip)
+			c.String(http.StatusForbidden, "拒绝访问")
 		}
 	}
 }
@@ -150,10 +134,11 @@ func (f *IPAdmission) WhitelistMiddleware() func(*HTTPContext) {
 func (f *IPAdmission) BlacklistMiddleware() func(*HTTPContext) {
 	return func(c *HTTPContext) {
 		ip := ClientIP(c.Request)
-		if !f.Check(ip).(bool) {
+		if !f.Check(ip) {
 			c.Next()
 		} else {
-			c.String(http.StatusUnauthorized, "拒绝访问")
+			c.Warn("IP blocked", "ip", ip)
+			c.String(http.StatusForbidden, "拒绝访问")
 		}
 	}
 }

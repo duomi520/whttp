@@ -16,14 +16,13 @@ func TestCalculateCount(t *testing.T) {
 		{"192.168.255.255/28", 16},
 		{"192.168.255.255/24", 256},
 		{"172.17.0.100/26", 64},
-		//	{"2001:db8::/16", 65534},
 	}
 	for i := range tests {
 		_, ipNet, err := net.ParseCIDR(tests[i][0].(string))
 		if err != nil {
 			t.Log(err)
 		}
-		v := calculateCount(ipNet)
+		v := calculateAvailableCount(ipNet)
 		if tests[i][1].(int) != v {
 			t.Errorf("%s expected %v got %v", tests[i][0], tests[i][1], v)
 		}
@@ -53,8 +52,8 @@ func TestIPAdmission(t *testing.T) {
 		{"2001:db9::1", false},
 	}
 	for i := range tests {
-		v := list.Check(tests[i][0].(string)).(bool)
-		if tests[i][1].(bool) != v {
+		v := list.Check(tests[i][0].(string))
+		if tests[i][1] != v {
 			t.Errorf("%s expected %v got %v", tests[i][0], tests[i][1], v)
 		}
 	}
@@ -87,6 +86,8 @@ func TestWhitelistMiddleware(t *testing.T) {
 	}
 }
 
+// 2025/07/22 14:38:53 WARN IP blocked ip=127.0.0.1
+
 func BenchmarkCheck(b *testing.B) {
 	list := NewIPAdmission()
 	list.ParseNode("127.0.0.1")
@@ -94,6 +95,7 @@ func BenchmarkCheck(b *testing.B) {
 	list.ParseNode("10.40.68.0/24")
 	list.ParseNode("10.40.69.0/24")
 	list.ParseNode("10.40.70.0/24")
+	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		list.Check("10.40.68.55")
 	}

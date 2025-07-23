@@ -144,7 +144,7 @@ func TestMethod(t *testing.T) {
 }
 
 /*
-time="2024-05-01 00:15:08" level=ERROR msg="not a POST request"
+time="2025-07-23 16:56:37" level=ERROR msg="not a POST request" url=/
 */
 
 func TestFile(t *testing.T) {
@@ -223,7 +223,7 @@ func TestUse(t *testing.T) {
 	}
 }
 
-// 2024/05/23 19:44:19 DEBUG |       514.2µs | 127.0.0.1:51959 |   200 |     GET | / | 2
+// 2025/07/23 09:53:26 DEBUG | 40.6µs        | 127.0.0.1:63189 | 200 | GET     | /                                        |       2 bytes
 type testUser struct {
 	Username string `json:"username"`
 	Email    string `json:"email"`
@@ -259,5 +259,54 @@ func TestBindJSON(t *testing.T) {
 	}
 	if !bytes.Equal(data, []byte("runoob:xxx@163.com")) {
 		t.Errorf("got %s | expected runoob:xxx@163.com", string(data))
+	}
+}
+
+func TestStatic(t *testing.T) {
+	r := NewRoute(nil)
+	r.Mux = http.NewServeMux()
+	r.Static("/", "txt\\welcome.txt")
+	ts := httptest.NewServer(r.Mux)
+	defer ts.Close()
+	res, err := http.Get(ts.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	data, err := io.ReadAll(res.Body)
+	defer res.Body.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(data, []byte("Welcome to the page!")) {
+		t.Errorf("got %s | expected %s", string(data), "Welcome to the page!")
+	}
+}
+func TestStaticFS(t *testing.T) {
+	r := NewRoute(nil)
+	r.Mux = http.NewServeMux()
+	r.StaticFS("txt")
+	ts := httptest.NewServer(r.Mux)
+	defer ts.Close()
+	tests := [][2]string{
+		{"/txt/a.txt", "a"},
+		{"/txt/b.txt", "b"},
+		{"/txt/1/c.txt", "c"},
+		{"/txt/welcome.txt", "Welcome to the page!"},
+		{"/file.tmp", "404 page not found\n"},
+		{"/file.tmpl", "404 page not found\n"},
+	}
+	for i := range tests {
+		resp, err := http.Get(ts.URL + tests[i][0])
+		if err != nil {
+			t.Fatal(err)
+		}
+		data, err := io.ReadAll(resp.Body)
+		defer resp.Body.Close()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !strings.EqualFold(tests[i][1], string(data)) {
+			t.Errorf("%d expected %s got %s", i, tests[i][1], string(data))
+		}
 	}
 }
