@@ -4,11 +4,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/fs"
 	"log/slog"
 	"net/http"
+	"net/url"
+	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
+
+	"github.com/duomi520/utils"
 )
 
 // DefaultMarshal 缺省JSON编码器
@@ -28,10 +33,11 @@ type WRoute struct {
 	Mux       *http.ServeMux
 	//模版
 	renderer Renderer
-	//HTTPContext String、JSON、Render IO Write时错误的处理函数
+	//HTTPContext String、JSON、Render、File IO Write时错误的处理函数
 	HookIOWriteError func(*HTTPContext, int, error)
 	// 实例级中间件
 	middlewares []func(*HTTPContext)
+	pool        *utils.Pool
 	//logger
 	logger *slog.Logger
 }
@@ -43,12 +49,10 @@ func NewRoute(l *slog.Logger) *WRoute {
 	r.HookIOWriteError = func(c *HTTPContext, n int, err error) {
 		if err != nil {
 			pc, _, l, _ := runtime.Caller(2)
-			if r.debugMode {
-				c.Error(fmt.Sprintf("%s[%d]:%s", runtime.FuncForPC(pc).Name(), l, err.Error()))
-			}
-			r.logger.Error("response write error", "error", err, "funcForPC", runtime.FuncForPC(pc).Name(), "line", l, "written_bytes", n)
+			r.logger.Error("hookIOWriteError", "error", err, "funcForPC", runtime.FuncForPC(pc).Name(), "line", l, "written_bytes", n)
 		}
 	}
+	r.pool = &utils.Pool{}
 	if l == nil {
 		r.logger = slog.Default()
 	} else {
@@ -69,7 +73,7 @@ func (r *WRoute) SetRenderer(s Renderer) {
 func (r *WRoute) Use(g ...func(*HTTPContext)) {
 	for _, v := range g {
 		if v == nil {
-			panic("中间件不为nil")
+			panic("middleware cannot be nil")
 		}
 	}
 	r.middlewares = append(r.middlewares, g...)
@@ -104,11 +108,8 @@ func (r *WRoute) HEAD(pattern string, fn ...func(*HTTPContext)) {
 func (r *WRoute) wrap(g []func(*HTTPContext), method string) func(http.ResponseWriter, *http.Request) {
 	for _, v := range g {
 		if v == nil {
-			panic("中间件不为nil")
+			panic("middleware cannot be nil")
 		}
-	}
-	if r.middlewares != nil {
-		g = append(r.middlewares, g...)
 	}
 	return func(rw http.ResponseWriter, req *http.Request) {
 		defer func() {
@@ -134,54 +135,77 @@ func (r *WRoute) wrap(g []func(*HTTPContext), method string) func(http.ResponseW
 			return
 		}
 		c := HTTPContextPool.Get().(*HTTPContext)
-		c.index = 0
-		c.chain = g
+		c.chain = append(c.chain, r.middlewares...)
+		c.chain = append(c.chain, g...)
 		c.Writer = rw
 		c.Request = req
-		c.Flush = nil
 		c.route = r
 		c.chain[0](c)
-		//数据写入下层
-		if c.Flush != nil {
-			n, err := c.Flush()
-			r.HookIOWriteError(c, n, err)
-		}
 		c.reset()
 		HTTPContextPool.Put(c)
 	}
 }
 
-// Static 将指定目录下的静态文件映射到URL路径中
+// Static 将指定目录下的静态文件映射到URL路径中,relativePath不支持中文
 func (r *WRoute) Static(relativePath, file string, group ...func(*HTTPContext)) {
-	// 验证路径安全性
 	if strings.Contains(relativePath, "..") || strings.Contains(file, "..") {
-		panic("路径包含非法字符 '..'")
+		panic("path contains illegal characters '..'")
 	}
 	for _, v := range group {
 		if v == nil {
-			panic("中间件不为nil")
+			panic("middleware cannot be nil")
 		}
 	}
-	file = filepath.Clean(file)
 	fn := func(c *HTTPContext) {
 		c.File(file)
 	}
 	r.GET(relativePath, append(group, fn)...)
 }
 
-// StaticFS 静态文件目录服务
-func (r *WRoute) StaticFS(dir string, group ...func(*HTTPContext)) {
+// StaticFS 静态文件目录服务,目录名不支持中文
+func (r *WRoute) StaticFS(root string, group ...func(*HTTPContext)) {
+	if strings.Contains(root, "..") {
+		panic("path contains illegal characters '..'")
+	}
 	for _, v := range group {
 		if v == nil {
-			panic("中间件不为nil")
+			panic("middleware cannot be nil")
 		}
 	}
-	dir = "/" + filepath.ToSlash(dir) + "/"
-	fn := func(c *HTTPContext) {
-		http.FileServer(http.Dir(".")).ServeHTTP(c.Writer, c.Request)
+	if _, err := os.Stat(root); err != nil {
+		if os.IsNotExist(err) {
+			panic("directory does not exist: " + root)
+		} else {
+			panic(err.Error())
+		}
 	}
-	r.GET(dir, append(group, fn)...)
+	WalkDirFunc := func(path string, d fs.DirEntry, err error) error {
+		// 返回遍历中的错误
+		if err != nil {
+			return err
+		}
+		// 跳过目录（只处理文件）
+		if d.IsDir() {
+			return nil
+		}
+		filePath, fileName := filepath.Split(path)
+		// 转换路径分隔符为正斜杠（适用于URL）
+		urlPath := "/" + filepath.ToSlash(filePath)
+		escapeUrl := urlPath + url.QueryEscape(fileName)
+		fn := func(c *HTTPContext) {
+			c.File(path)
+		}
+		r.GET(escapeUrl, append(group, fn)...)
+		return nil
+
+	}
+	// 遍历目录
+	err := filepath.WalkDir(root, WalkDirFunc)
+	if err != nil {
+		panic(err.Error())
+	}
 }
 
 // https://mp.weixin.qq.com/s/n-kU6nwhOH6ouhufrP_1kQ
 // https://zhuanlan.zhihu.com/p/679527662
+// https://www.cnblogs.com/schaepher/p/12831623.html

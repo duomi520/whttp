@@ -41,8 +41,8 @@ func TestJWTMiddleware(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.EqualFold(string(data), "缺少令牌") {
-		t.Fatalf("expected %v got %v", "缺少令牌", string(data))
+	if !strings.EqualFold(string(data), "Missing token") {
+		t.Fatalf("expected %v got %v", "Missing token", string(data))
 	}
 	//带token
 	claims := map[string]any{"id": 1920}

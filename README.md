@@ -56,7 +56,7 @@ func main() {
 }
 ```
 
-使用`go run` 命令运行：
+使用 `go run` 命令运行：
 
 ```sh
 go run main.go
@@ -107,12 +107,12 @@ route.POST("/", func(c *HTTPContext) {
 
 | 操作          | 解析                        | 读取 URL | 读取 Body（表单） | 支持文本 | 支持二进制 |
 | ------------- | --------------------------- | -------- | ----------------- | -------- | ---------- |
-| Form          | ParseForm                   | √        | √                 | √        |            |
-| PostForm      | ParseForm                   |          | √                 | √        |            |
-| FormValue     | 自动调用 ParseForm          | √        | √                 | √        |            |
-| PostFormValue | 自动调用 ParseForm          |          | √                 | √        |            |
-| MultipartForm | ParseMultipartForm          |          | √                 | √        | √          |
-| FormFile      | 自动调用 ParseMultipartForm |          | √                 |          | √          |
+| Form          | ParseForm                   | √       | √                | √       |            |
+| PostForm      | ParseForm                   |          | √                | √       |            |
+| FormValue     | 自动调用 ParseForm          | √       | √                | √       |            |
+| PostFormValue | 自动调用 ParseForm          |          | √                | √       |            |
+| MultipartForm | ParseMultipartForm          |          | √                | √       | √         |
+| FormFile      | 自动调用 ParseMultipartForm |          | √                |          | √         |
 
 ### 响应方式
 
@@ -123,13 +123,6 @@ status 为 http 状态码，响应方式会在中间件执行完毕后执行
 - 返回二进制 func (c \*HTTPContext) Blob(status int, contentType string, data []byte)
 - 返回文件 func (c \*HTTPContext) File(filepath string)
 
-自定义
-
-```go
-c.Flush = func() (int, error) {
-  return c.Writer.Write(d)
-}
-```
 
 ### 模板
 

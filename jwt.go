@@ -83,17 +83,17 @@ func (j JWT) JWTMiddleware(requiredClaims ...string) func(*HTTPContext) {
 	return func(c *HTTPContext) {
 		authHeader := c.Request.Header.Get("Authorization")
 		if len(authHeader) == 0 {
-			c.String(http.StatusUnauthorized, "缺少令牌")
+			c.String(http.StatusUnauthorized, "Missing token")
 			return
 		}
 		claims, err := j.TokenParse(authHeader)
 		if err != nil {
-			c.String(http.StatusUnauthorized, "令牌无效")
+			c.String(http.StatusUnauthorized, "Token invalid")
 			return
 		}
 		for _, v := range requiredClaims {
 			if a, ok := claims[v]; !ok {
-				c.String(http.StatusUnauthorized, "令牌缺失必要信息")
+				c.String(http.StatusUnauthorized, "The token lacks necessary information")
 				return
 			} else {
 				c.Set(v, a)

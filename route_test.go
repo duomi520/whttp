@@ -7,7 +7,9 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -102,13 +104,16 @@ func TestMiddleware(t *testing.T) {
 	//r.POST("/", MiddlewareA(), MiddlewareB(), MiddlewareC(), fn)
 	ts := httptest.NewServer(r.Mux)
 	defer ts.Close()
-	_, err := http.Post(ts.URL, "application/x-www-form-urlencoded",
-		strings.NewReader(""))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !strings.EqualFold(signature, "A1B1C1<->C2B2A2") {
-		t.Errorf("got %s | expected A1B1C1<->C2B2A2", signature)
+	for range 10 {
+		_, err := http.Post(ts.URL, "application/x-www-form-urlencoded",
+			strings.NewReader(""))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !strings.EqualFold(signature, "A1B1C1<->C2B2A2") {
+			t.Errorf("got %s | expected A1B1C1<->C2B2A2", signature)
+		}
+		signature = ""
 	}
 }
 
@@ -156,21 +161,24 @@ func TestFile(t *testing.T) {
 	r.GET("/", fn)
 	ts := httptest.NewServer(r.Mux)
 	defer ts.Close()
-	res, err := http.Get(ts.URL)
-	if err != nil {
-		t.Fatal(err)
-	}
-	data, err := io.ReadAll(res.Body)
-	res.Body.Close()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !bytes.Equal(data, []byte("a")) {
-		t.Errorf("got %s | expected a", string(data))
+	for range 5 {
+		res, err := http.Get(ts.URL)
+		if err != nil {
+			t.Fatal(err)
+		}
+		data, err := io.ReadAll(res.Body)
+		res.Body.Close()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !bytes.Equal(data, []byte("a")) {
+			t.Errorf("got %s | expected a", string(data))
+		}
 	}
 }
 
 func TestRender(t *testing.T) {
+	slog.SetLogLoggerLevel(slog.LevelDebug)
 	tl, err := template.ParseFiles("file.tmpl")
 	if err != nil {
 		t.Fatal(err)
@@ -181,22 +189,27 @@ func TestRender(t *testing.T) {
 	fn := func(c *HTTPContext) {
 		c.Render(http.StatusOK, "file.tmpl", "6月7日")
 	}
-	r.GET("/", fn)
+	r.GET("/", LoggerMiddleware(), fn)
 	ts := httptest.NewServer(r.Mux)
 	defer ts.Close()
-	res, err := http.Get(ts.URL)
-	if err != nil {
-		t.Fatal(err)
-	}
-	data, err := io.ReadAll(res.Body)
-	res.Body.Close()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !bytes.Equal(data, []byte("6月7日")) {
-		t.Errorf("got %s | expected 6月7日", string(data))
+	for range 2 {
+		res, err := http.Get(ts.URL)
+		if err != nil {
+			t.Fatal(err)
+		}
+		data, err := io.ReadAll(res.Body)
+		res.Body.Close()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !bytes.Equal(data, []byte("6月7日")) {
+			t.Errorf("got %s | expected 6月7日", string(data))
+		}
 	}
 }
+
+// 2025/08/04 12:34:26 DEBUG | 0s            | 127.0.0.1:54554 | 200 | GET     | /                                        |       8 bytes
+// 2025/08/04 12:34:26 DEBUG | 0s            | 127.0.0.1:54554 | 200 | GET     | /                                        |       8 bytes
 
 func TestUse(t *testing.T) {
 	slog.SetLogLoggerLevel(slog.LevelDebug)
@@ -263,24 +276,39 @@ func TestBindJSON(t *testing.T) {
 }
 
 func TestStatic(t *testing.T) {
+	tests := [][3]string{
+		{"/", "txt\\welcome.txt", "Welcome to the page!"},
+		{"/c", "txt\\1\\c.txt", "c"},
+		{"/d", "txt\\d.txt", "404 page not found"},
+		{"/e", "txt\\1\\《洛神赋》.txt", "黄初三年"},
+	}
 	r := NewRoute(nil)
 	r.Mux = http.NewServeMux()
-	r.Static("/", "txt\\welcome.txt")
+	for i := range tests {
+		r.Static(tests[i][0], tests[i][1])
+	}
 	ts := httptest.NewServer(r.Mux)
 	defer ts.Close()
-	res, err := http.Get(ts.URL)
-	if err != nil {
-		t.Fatal(err)
-	}
-	data, err := io.ReadAll(res.Body)
-	defer res.Body.Close()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !bytes.Equal(data, []byte("Welcome to the page!")) {
-		t.Errorf("got %s | expected %s", string(data), "Welcome to the page!")
+	for i := range tests {
+		res, err := http.Get(ts.URL + "/" + tests[i][0][1:])
+		if err != nil {
+			t.Fatal(err)
+		}
+		data, err := io.ReadAll(res.Body)
+		defer res.Body.Close()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if i == 3 {
+			data = data[:12]
+		}
+		if !bytes.Equal(data, []byte(tests[i][2])) {
+			t.Errorf("got %s | expected %s", string(data), tests[i][2])
+		}
 	}
 }
+
+// 2025/07/28 11:56:16 ERROR File error="open txt\\d.txt: The system cannot find the file specified."
 func TestStaticFS(t *testing.T) {
 	r := NewRoute(nil)
 	r.Mux = http.NewServeMux()
@@ -294,9 +322,12 @@ func TestStaticFS(t *testing.T) {
 		{"/txt/welcome.txt", "Welcome to the page!"},
 		{"/file.tmp", "404 page not found\n"},
 		{"/file.tmpl", "404 page not found\n"},
+		{"/txt/1/《洛神赋》.txt", "黄初三年"},
 	}
 	for i := range tests {
-		resp, err := http.Get(ts.URL + tests[i][0])
+		filePath, fileName := filepath.Split(tests[i][0])
+		escapeUrl := filePath + url.QueryEscape(fileName)
+		resp, err := http.Get(ts.URL + escapeUrl)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -304,6 +335,9 @@ func TestStaticFS(t *testing.T) {
 		defer resp.Body.Close()
 		if err != nil {
 			t.Fatal(err)
+		}
+		if i == 6 {
+			data = data[:12]
 		}
 		if !strings.EqualFold(tests[i][1], string(data)) {
 			t.Errorf("%d expected %s got %s", i, tests[i][1], string(data))

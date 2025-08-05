@@ -64,7 +64,7 @@ func (f *IPAdmission) ParseNode(line string) error {
 		}
 		return nil
 	}
-	return errors.New("CIDR 失败")
+	return errors.New("CIDR failed")
 }
 
 // RemoveNode 移除规则
@@ -97,7 +97,7 @@ func (f *IPAdmission) RemoveNode(line string) error {
 		}
 		return nil
 	}
-	return errors.New("CIDR 失败")
+	return errors.New("CIDR failed")
 }
 
 // Check 检查某个ip在不在设置的规则里
@@ -125,7 +125,7 @@ func (f *IPAdmission) WhitelistMiddleware() func(*HTTPContext) {
 			c.Next()
 		} else {
 			c.Warn("IP blocked", "ip", ip)
-			c.String(http.StatusForbidden, "拒绝访问")
+			c.String(http.StatusForbidden, "No access")
 		}
 	}
 }
@@ -138,7 +138,7 @@ func (f *IPAdmission) BlacklistMiddleware() func(*HTTPContext) {
 			c.Next()
 		} else {
 			c.Warn("IP blocked", "ip", ip)
-			c.String(http.StatusForbidden, "拒绝访问")
+			c.String(http.StatusForbidden, "No access")
 		}
 	}
 }

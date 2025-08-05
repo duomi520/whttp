@@ -45,8 +45,6 @@ func main() {
  route.GET("/version", func(c *whttp.HTTPContext) {
   c.String(http.StatusOK, Version)
  })
- //favicon.ico
- route.CacheFile("favicon.ico", &mf)
  //启动服务
  if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
   slog.Error(err.Error())

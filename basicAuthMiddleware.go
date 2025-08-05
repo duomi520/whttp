@@ -8,7 +8,7 @@ import (
 
 func BasicAuthMiddleware(valid func(c *HTTPContext, username, password string) bool) func(*HTTPContext) {
 	if valid == nil {
-		panic("BasicAuthMiddleware 验证函数不为nil")
+		panic("basicAuthMiddleware: verification function cannot be nil")
 	}
 	return func(c *HTTPContext) {
 		auth := c.Request.Header.Get("Authorization")
@@ -28,6 +28,8 @@ func BasicAuthMiddleware(valid func(c *HTTPContext, username, password string) b
 					}
 				}
 
+			} else {
+				c.Error("BasicAuthMiddleware", "error", err.Error(), "auth", auth)
 			}
 		}
 		c.Writer.Header().Set("WWW-Authenticate", "Base realm=\"Restricted\"")
