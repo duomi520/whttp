@@ -10,7 +10,7 @@ WHTTP 是一个用[Go](https://go.dev/) 开发的 web 脚手架，基于标准�
 
 ### 必要条件
 
-需要 [Go](https://go.dev/) 版本 [1.22](https://go.dev/doc/devel/release#go1.22.0) 以上
+需要 [Go](https://go.dev/) 版本 [1.24](https://go.dev/doc/devel/release#go1.24.0) 以上
 
 ### 获取
 
@@ -107,22 +107,21 @@ route.POST("/", func(c *HTTPContext) {
 
 | 操作          | 解析                        | 读取 URL | 读取 Body（表单） | 支持文本 | 支持二进制 |
 | ------------- | --------------------------- | -------- | ----------------- | -------- | ---------- |
-| Form          | ParseForm                   | √       | √                | √       |            |
-| PostForm      | ParseForm                   |          | √                | √       |            |
-| FormValue     | 自动调用 ParseForm          | √       | √                | √       |            |
-| PostFormValue | 自动调用 ParseForm          |          | √                | √       |            |
-| MultipartForm | ParseMultipartForm          |          | √                | √       | √         |
-| FormFile      | 自动调用 ParseMultipartForm |          | √                |          | √         |
+| Form          | ParseForm                   | √        | √                 | √        |            |
+| PostForm      | ParseForm                   |          | √                 | √        |            |
+| FormValue     | 自动调用 ParseForm          | √        | √                 | √        |            |
+| PostFormValue | 自动调用 ParseForm          |          | √                 | √        |            |
+| MultipartForm | ParseMultipartForm          |          | √                 | √        | √          |
+| FormFile      | 自动调用 ParseMultipartForm |          | √                 |          | √          |
 
 ### 响应方式
 
-status 为 http 状态码，响应方式会在中间件执行完毕后执行
+status 为 http 状态码
 
 - 返回字符串 func (c \*HTTPContext) String(status int, msg string)
 - 返回 JSON func (c \*HTTPContext) JSON(status int, v any)
 - 返回二进制 func (c \*HTTPContext) Blob(status int, contentType string, data []byte)
 - 返回文件 func (c \*HTTPContext) File(filepath string)
-
 
 ### 模板
 
@@ -138,17 +137,17 @@ status 为 http 状态码，响应方式会在中间件执行完毕后执行
 //解析模板文件
 tl, err := template.ParseFiles("file.tmpl")
 if err != nil {
-  c.String(http.StatusInternalServerError, err.Error())
+  panic(err.Error())
 }
 //注册模板
 route.SetRenderer(tl)
 route.GET("/", func(c *HTTPContext) {
   //渲染模板
-  c.Render(http.StatusOK, "file.tmpl", "6月7日")
+  c.Render(http.StatusOK, "file.tmpl", "经来震旦三千界,人在天龙八部中")
 })
 ```
 
-渲染结果为：6 月 7 日
+渲染结果为：经来震旦三千界,人在天龙八部中
 
 ### 静态文件服务
 
@@ -199,8 +198,23 @@ route.GET("/some", append(g, Endpoint)...)
 全局中间件，需在初始化后立即加载。
 
 ```go
+slog.SetLogLoggerLevel(slog.LevelDebug)
 route.Use(LoggerMiddleware())
 ```
+
+自带的中间件
+
+| 名称                | 功能      |
+| ------------------- | --------- |
+| LoggerMiddleware    | 日志      |
+| BasicAuthMiddleware | 基本认证  |
+| CacheMiddleware     | 缓存      |
+| ETagMiddleware      | ETag      |
+| GZIPMiddleware      | gzip      |
+| HeaderMiddleware    | Header    |
+| WhitelistMiddleware | ip 白名单 |
+| BlacklistMiddleware | ip 黑名单 |
+| JWTMiddleware       | jwt       |
 
 ### 自定义日志
 

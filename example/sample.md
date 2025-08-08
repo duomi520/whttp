@@ -17,7 +17,6 @@ const (
  Version ="1.0.1"
 )
 func main() {
- var mf whttp.MemoryFile
  route := whttp.NewRoute(nil)
  //配置服务
  srv := &http.Server{
