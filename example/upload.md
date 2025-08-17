@@ -67,6 +67,7 @@ slog.Error(err.Error())
 <html>
   <head>
     <meta charset="utf-8" />
+    <link rel="icon" href="data:;base64,=qWNv" />
   </head>
 
   <body>

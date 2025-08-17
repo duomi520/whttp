@@ -51,6 +51,7 @@ slog.Error(err.Error())
 <html>
   <head>
     <meta charset="utf-8" />
+    <link rel="icon" href="data:;base64,=qWNv" />
     <script>
       window.addEventListener("load", function (evt) {
         var output = document.getElementById("output");
